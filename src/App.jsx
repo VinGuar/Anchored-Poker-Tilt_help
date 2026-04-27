@@ -30,6 +30,7 @@ export default function App() {
   const [theme, setTheme] = useState('dark');
   const [authPrompt, setAuthPrompt] = useState('');
   const [appNotice, setAppNotice] = useState('');
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -58,6 +59,91 @@ export default function App() {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    const isMobileViewport = () => window.matchMedia('(max-width: 1023px)').matches;
+    const isEditable = (el) => {
+      if (!el) return false;
+      if (el instanceof HTMLTextAreaElement) return true;
+      if (el instanceof HTMLInputElement) {
+        const type = (el.type || 'text').toLowerCase();
+        return !['button', 'submit', 'reset', 'checkbox', 'radio', 'range', 'file', 'color'].includes(type);
+      }
+      if (el instanceof HTMLSelectElement) return true;
+      if (el instanceof HTMLElement && el.isContentEditable) return true;
+      return false;
+    };
+
+    let rafId = 0;
+    let settleTimer = 0;
+    const appEl = document.querySelector('.app');
+
+    const updateKeyboardState = () => {
+      if (!isMobileViewport()) {
+        setKeyboardOpen(false);
+        appEl?.classList.remove('keyboard-open');
+        return;
+      }
+      const vv = window.visualViewport;
+      const viewportHeight = vv?.height || window.innerHeight;
+      const baseHeight = window.innerHeight;
+      const open = baseHeight - viewportHeight > 140;
+      setKeyboardOpen(open);
+      if (open) appEl?.classList.add('keyboard-open');
+      else appEl?.classList.remove('keyboard-open');
+    };
+
+    const nudgeFocusedInput = () => {
+      if (!isMobileViewport()) return;
+      const active = document.activeElement;
+      if (!isEditable(active)) return;
+      if (!(active instanceof HTMLElement)) return;
+      active.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
+    };
+
+    const scheduleNudge = () => {
+      window.clearTimeout(settleTimer);
+      if (rafId) window.cancelAnimationFrame(rafId);
+      rafId = window.requestAnimationFrame(() => {
+        nudgeFocusedInput();
+        settleTimer = window.setTimeout(nudgeFocusedInput, 180);
+      });
+    };
+
+    const onFocusIn = () => {
+      updateKeyboardState();
+      scheduleNudge();
+    };
+
+    const onFocusOut = () => {
+      window.setTimeout(() => {
+        updateKeyboardState();
+      }, 120);
+    };
+
+    const onViewportChange = () => {
+      updateKeyboardState();
+      scheduleNudge();
+    };
+
+    document.addEventListener('focusin', onFocusIn);
+    document.addEventListener('focusout', onFocusOut);
+    window.addEventListener('resize', onViewportChange);
+    window.visualViewport?.addEventListener('resize', onViewportChange);
+    window.visualViewport?.addEventListener('scroll', onViewportChange);
+    updateKeyboardState();
+
+    return () => {
+      if (rafId) window.cancelAnimationFrame(rafId);
+      window.clearTimeout(settleTimer);
+      document.removeEventListener('focusin', onFocusIn);
+      document.removeEventListener('focusout', onFocusOut);
+      window.removeEventListener('resize', onViewportChange);
+      window.visualViewport?.removeEventListener('resize', onViewportChange);
+      window.visualViewport?.removeEventListener('scroll', onViewportChange);
+      appEl?.classList.remove('keyboard-open');
+    };
+  }, []);
 
   useEffect(() => {
     if (!user?.id) {
@@ -334,7 +420,7 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <div className={`app ${keyboardOpen ? 'keyboard-open' : ''}`}>
       <Sidebar
         screen={screen}
         navigate={navigate}

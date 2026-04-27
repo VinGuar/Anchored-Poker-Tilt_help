@@ -43,6 +43,26 @@ export default function HomeScreen({ sessions, startSession, patterns, accumulat
         </button>
       </div>
 
+      <div className="card app-explainer-card" style={{ marginTop: '2px' }}>
+        <div className="card-title">How Anchored helps</div>
+        <div className="app-explainer-points">
+          {[
+            { icon: '⚡', title: 'Catch tilt early', text: 'Quick check-ins flag drift before it costs EV.' },
+            { icon: '🧭', title: 'Reset your process', text: 'Simple prompts keep decisions intentional.' },
+            { icon: '📝', title: 'Track key moments', text: 'Log events and notes in real time.' },
+            { icon: '📈', title: 'Improve over time', text: 'Session history surfaces repeat patterns.' },
+          ].map((item, idx) => (
+            <div key={idx} className="app-explainer-item">
+              <span className="app-explainer-icon">{item.icon}</span>
+              <div className="app-explainer-copy">
+                <div className="app-explainer-title">{item.title}</div>
+                <div className="app-explainer-text">{item.text}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {totalSessions > 0 && (
         <div className="stat-row">
           <div className="stat-card">

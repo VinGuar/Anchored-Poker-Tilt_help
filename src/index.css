@@ -164,6 +164,7 @@ body {
   display: flex;
   flex-direction: column;
   padding-bottom: calc(var(--nav-height) + 8px);
+  scroll-padding-bottom: calc(var(--nav-height) + 24px);
   animation: fadeIn 0.15s ease;
 }
 
@@ -932,10 +933,56 @@ body {
 .welcome-title { font-size: 18px; font-weight: 800; margin-bottom: 8px; }
 .welcome-sub { font-size: 14px; color: var(--text-secondary); line-height: 1.5; }
 
+.app-explainer-card {
+  padding: 14px;
+}
+
+.app-explainer-points {
+  display: grid;
+  gap: 8px;
+}
+
+.app-explainer-item {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 10px;
+  align-items: start;
+  border: 1px solid rgba(143, 173, 212, 0.2);
+  background: rgba(143, 173, 212, 0.08);
+  border-radius: 12px;
+  padding: 9px 10px;
+}
+
+.app-explainer-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(20, 184, 166, 0.16);
+  font-size: 14px;
+}
+
+.app-explainer-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.app-explainer-text {
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
 /* ── Scroll area ── */
 .scroll-area {
   overflow-y: auto;
   flex: 1;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 /* ── Big frustration display ── */
@@ -1598,6 +1645,135 @@ body {
   background: rgba(143, 173, 212, 0.06);
 }
 
+.insight-detail-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(8, 10, 20, 0.62);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.insight-detail-card {
+  width: min(720px, 100%);
+  max-height: min(84dvh, 760px);
+  border-radius: 14px;
+  border: 1px solid var(--border-soft);
+  background: var(--surface);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+}
+
+.insight-detail-head {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-soft);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.insight-detail-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.insight-detail-meta {
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.insight-detail-body {
+  overflow-y: auto;
+  padding: 12px 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.insight-detail-section {
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  padding: 10px;
+  background: var(--surface-2);
+}
+
+.insight-detail-section-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+}
+
+.insight-detail-list {
+  display: grid;
+  gap: 4px;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.insight-detail-stack {
+  display: grid;
+  gap: 8px;
+}
+
+.insight-detail-item {
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  padding: 8px;
+  background: rgba(143, 173, 212, 0.06);
+}
+
+.insight-detail-item-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.insight-detail-grid {
+  margin-top: 6px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 8px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.insight-detail-subcopy {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.insight-detail-empty {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 640px) {
+  .insight-detail-overlay {
+    padding: 10px;
+  }
+
+  .insight-detail-card {
+    max-height: min(88dvh, 760px);
+  }
+
+  .insight-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Auth */
 .auth-card {
   margin-top: 8px;
@@ -1674,31 +1850,67 @@ body {
 }
 
 .session-hub-card {
-  padding: 12px;
+  position: relative;
+  overflow: hidden;
+  padding: 14px;
+  border-radius: 22px;
+  border: 1px solid rgba(92, 126, 176, 0.2);
+  background:
+    radial-gradient(110% 95% at 100% 0%, rgba(66, 219, 200, 0.07) 0%, rgba(66, 219, 200, 0) 60%),
+    radial-gradient(120% 85% at 0% 100%, rgba(126, 92, 255, 0.08) 0%, rgba(126, 92, 255, 0) 62%),
+    linear-gradient(180deg, rgba(20, 31, 59, 0.78) 0%, rgba(14, 22, 46, 0.72) 100%);
+  box-shadow: 0 12px 34px rgba(3, 10, 26, 0.3);
 }
 
 .note-block-compact {
-  padding: 8px 10px;
+  padding: 10px 11px;
 }
 
 .note-text-compact {
   font-size: 13px;
-  line-height: 1.4;
+  line-height: 1.48;
+}
+
+.session-hub-title-wrap {
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(143, 173, 212, 0.16);
+}
+
+.session-hub-title {
+  margin-bottom: 4px;
+}
+
+.session-hub-subtitle {
+  font-size: 12px;
+  color: var(--text-secondary);
+  opacity: 0.92;
+}
+
+.session-hub-cue {
+  background: rgba(143, 173, 212, 0.08);
+  border-color: rgba(143, 173, 212, 0.2);
+  border-radius: 16px;
 }
 
 .session-note-workspace {
-  margin-top: 8px;
-  border: 1px solid var(--border-soft);
-  background: rgba(143, 173, 212, 0.05);
-  border-radius: var(--radius-sm);
-  padding: 8px;
+  margin-top: 6px;
+  border: none;
+  background: transparent;
+  border-radius: 0;
+  padding: 10px 2px 2px;
 }
 
 .session-note-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 6px;
+  margin-bottom: 9px;
+  padding: 0 4px;
+}
+
+.session-note-label {
+  margin-bottom: 0;
 }
 
 .session-note-actions {
@@ -1710,17 +1922,24 @@ body {
 .note-status {
   font-size: 11px;
   color: var(--text-secondary);
+  padding: 2px 0;
 }
 
 .session-note-workspace .btn-inline {
-  padding: 6px 10px;
+  padding: 7px 11px;
   font-size: 11px;
+  border-radius: 9px;
 }
 
 .session-note-workspace .note-input {
   min-height: 82px;
   transition: min-height 0.15s ease;
-  padding-right: 34px;
+  width: 100%;
+  border: none;
+  outline: none;
+  padding: 42px 34px 10px 11px;
+  border-radius: 0;
+  background: transparent;
 }
 
 .session-note-workspace.expanded .note-input {
@@ -1729,6 +1948,74 @@ body {
 
 .note-input-wrap {
   position: relative;
+  border: 1px solid rgba(143, 173, 212, 0.2);
+  border-radius: 14px;
+  background: rgba(24, 39, 76, 0.52);
+  overflow: hidden;
+}
+
+.note-toolbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 30px;
+  border-bottom: 1px solid rgba(143, 173, 212, 0.2);
+  background: rgba(18, 33, 64, 0.86);
+  display: flex;
+  align-items: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  z-index: 1;
+}
+
+.note-toolbar::-webkit-scrollbar {
+  display: none;
+}
+
+.note-tool-btn {
+  border: none;
+  border-right: 1px solid rgba(143, 173, 212, 0.14);
+  background: transparent;
+  color: rgba(214, 228, 255, 0.85);
+  min-width: 58px;
+  height: 100%;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  cursor: pointer;
+}
+
+.note-tool-btn:hover {
+  color: var(--text);
+  background: rgba(66, 219, 200, 0.14);
+}
+
+.note-tool-btn:last-child {
+  border-right: none;
+}
+
+.note-tool-icon {
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.note-tool-btn strong {
+  font-size: 12px;
+}
+
+.note-tool-label {
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  opacity: 0.96;
 }
 
 .note-expand-btn {
@@ -1738,8 +2025,8 @@ body {
   width: 22px;
   height: 22px;
   border: 1px solid var(--border-soft);
-  border-radius: 6px;
-  background: var(--surface-3);
+  border-radius: 999px;
+  background: rgba(31, 47, 88, 0.78);
   color: var(--text-secondary);
   font-size: 13px;
   line-height: 1;
@@ -1751,13 +2038,134 @@ body {
 
 .note-expand-btn:hover {
   color: var(--text);
+  border-color: rgba(66, 219, 200, 0.4);
 }
 
 .session-start-panel {
   padding: 16px 14px;
-  margin-top: 2px;
+  margin-top: 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(71, 197, 184, 0.18);
+  background:
+    radial-gradient(135% 95% at 0% 0%, rgba(66, 219, 200, 0.08) 0%, rgba(66, 219, 200, 0) 62%),
+    linear-gradient(180deg, rgba(16, 30, 60, 0.78) 0%, rgba(12, 24, 47, 0.72) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 .session-start-panel .focus-title {
-  font-size: 24px;
+  font-size: 21px;
+  line-height: 1.2;
+  margin-bottom: 8px;
+}
+
+.session-start-panel .focus-sub {
+  color: rgba(204, 219, 255, 0.9);
+  line-height: 1.45;
+  margin-bottom: 12px;
+}
+
+.session-start-panel .btn {
+  min-height: 54px;
+  font-size: 16px;
+  font-weight: 800;
+  border-radius: 12px;
+}
+
+/* Mobile-first text input ergonomics */
+@media (max-width: 640px) {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  input,
+  textarea,
+  select {
+    font-size: 16px; /* prevents iOS zoom on focus */
+  }
+
+  .auth-input,
+  .note-input {
+    border-radius: 12px;
+    line-height: 1.5;
+  }
+
+  .auth-input {
+    min-height: 48px;
+    padding: 12px;
+  }
+
+  .session-note-workspace .note-input {
+    min-height: 132px;
+    padding-top: 44px;
+    padding-bottom: 14px;
+  }
+
+  .session-note-workspace.expanded .note-input {
+    min-height: 240px;
+  }
+
+  .note-toolbar {
+    height: 32px;
+  }
+
+  .note-tool-btn {
+    min-width: 62px;
+    padding: 0 10px;
+  }
+
+  .note-tool-label {
+    font-size: 10px;
+  }
+
+  .note-expand-btn {
+    width: 24px;
+    height: 24px;
+    right: 9px;
+    bottom: 9px;
+  }
+}
+
+/* App-wide mobile keyboard safety and touch ergonomics */
+@media (max-width: 1023px) {
+  .app {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .main-content {
+    min-height: 0;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  .screen,
+  .result-scroll,
+  .history-scroll,
+  .insight-detail-body {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .btn,
+  .btn-inline,
+  .nav-item,
+  .note-tool-btn {
+    touch-action: manipulation;
+  }
+
+  .app.keyboard-open .bottom-nav,
+  .app.keyboard-open .result-bottom-nav,
+  .app.keyboard-open .session-check-dock {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(120%);
+    transition: transform 0.18s ease, opacity 0.15s ease;
+  }
+
+  .app.keyboard-open .screen {
+    padding-bottom: 16px;
+    scroll-padding-bottom: 34vh;
+  }
+
+  .app.keyboard-open .session-live-screen {
+    padding-bottom: 24px;
+  }
 }
