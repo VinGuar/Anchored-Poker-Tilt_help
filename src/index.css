@@ -176,7 +176,7 @@ body {
 
 /* ── Header ── */
 .header {
-  padding: calc(10px + var(--safe-top)) var(--content-pad) 16px;
+  padding: 14px var(--content-pad) 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2129,6 +2129,8 @@ body {
 /* App-wide mobile keyboard safety and touch ergonomics */
 @media (max-width: 1023px) {
   .app {
+    /* Reserve top UI space for notch/dynamic island across iPhones */
+    padding-top: max(env(safe-area-inset-top, 0px), 14px);
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
