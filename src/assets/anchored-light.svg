@@ -1,0 +1,37 @@
+<svg width="400" height="480" viewBox="0 0 400 480" xmlns="http://www.w3.org/2000/svg">
+<title>Anchored — light background variant</title>
+<defs>
+  <linearGradient id="tealLight" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" stop-color="#14b8a6"/>
+    <stop offset="100%" stop-color="#0d9488"/>
+  </linearGradient>
+  <linearGradient id="blueLight" x1="100%" y1="0%" x2="0%" y2="100%">
+    <stop offset="0%" stop-color="#6376e6"/>
+    <stop offset="100%" stop-color="#4f6787"/>
+  </linearGradient>
+  <clipPath id="spadeClipL">
+    <path d="M200,30 C200,30 80,98 62,178 C50,236 78,280 124,282 C103,306 89,325 74,342 L93,342 C102,325 127,310 200,308 C273,310 298,325 307,342 L326,342 C311,325 297,306 276,282 C322,280 350,236 338,178 C320,98 200,30 200,30 Z"/>
+  </clipPath>
+</defs>
+
+<!-- transparent background — no rect fill -->
+
+<g clip-path="url(#spadeClipL)">
+  <rect x="0" y="0" width="200" height="480" fill="url(#tealLight)"/>
+  <path d="M145,65 C122,82 105,110 100,140 C96,170 106,200 126,218" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" opacity="0.3"/>
+  <path d="M170,50 C144,70 125,102 120,135 C115,168 126,200 148,220" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" opacity="0.22"/>
+  <path d="M122,95 C104,112 96,136 100,160" fill="none" stroke="#ffffff" stroke-width="1.4" stroke-linecap="round" opacity="0.22"/>
+
+  <rect x="200" y="0" width="200" height="480" fill="url(#blueLight)"/>
+  <path d="M255,65 C278,82 295,110 300,140 C304,170 294,200 274,218" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" opacity="0.3"/>
+  <path d="M230,50 C256,70 275,102 280,135 C285,168 274,200 252,220" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" opacity="0.22"/>
+  <path d="M278,95 C296,112 304,136 300,160" fill="none" stroke="#ffffff" stroke-width="1.4" stroke-linecap="round" opacity="0.22"/>
+
+  <rect x="198.5" y="0" width="3" height="480" fill="#ffffff" opacity="0.35"/>
+</g>
+
+<path d="M200,30 C200,30 80,98 62,178 C50,236 78,280 124,282 C103,306 89,325 74,342 L93,342 C102,325 127,310 200,308 C273,310 298,325 307,342 L326,342 C311,325 297,306 276,282 C322,280 350,236 338,178 C320,98 200,30 200,30 Z" fill="none" stroke="#c8d6eb" stroke-width="1.5"/>
+
+<text x="200" y="398" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="34" font-weight="700" letter-spacing="9" fill="#10213a">ANCHORED</text>
+<text x="200" y="424" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="10" letter-spacing="3.5" fill="#14b8a6" opacity="0.9">STAY GROUNDED. PLAY YOUR BEST.</text>
+</svg>
