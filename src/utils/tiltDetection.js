@@ -1,5 +1,5 @@
 // ─── Tilt type profiles ───────────────────────────────────────────────────────
-// Original content — concepts drawn from general mental performance psychology,
+// Original content, concepts drawn from general mental performance psychology,
 // not reproduced from any specific copyrighted source.
 const TILT_PROFILES = {
   injustice: {
@@ -8,21 +8,25 @@ const TILT_PROFILES = {
     description:
       "Bad beats and variance are fueling this. You got your money in right, the math was on your side, but the outcome wasn't. The injustice of variance is triggering frustration.",
     mentalReset: [
-      "Correct decisions are the product. The pot is just the payment schedule — and it's always delayed.",
+      "Correct decisions are the product. The pot is just the payment schedule, and it's always delayed.",
       "Losing an 80/20 is statistically required. It happens to every good player, every single session.",
       "Variance doesn't owe me anything. My edge lives in volume, not individual pots.",
+      "You can't control the cards that are dealt. You can control how you play and respond.",
+      "Just because I lost the hand does not mean I played it badly.",
     ],
-    longTermTip: "Track decisions, not results. After bad beats, write down whether you made the right play — not what happened to the pot.",
+    longTermTip: "Track decisions, not results. After bad beats, write down whether you made the right play, not what happened to the pot.",
   },
   revenge: {
     name: 'Revenge Tilt',
     tagline: 'Playing to settle a score',
     description:
-      "A player at the table has gotten under your skin. You're not making decisions anymore — you're targeting someone, and it's costing you equity.",
+      "A player at the table has gotten under your skin. You're not making decisions anymore, you're targeting someone, and it's costing you equity.",
     mentalReset: [
       "Playing my best game is the most effective response to any player at this table.",
-      "My chips aren't weapons for ego battles — they're tools for +EV decisions.",
+      "My chips aren't weapons for ego battles, they're tools for +EV decisions.",
       "The second I start hunting someone, I hand them my edge.",
+      "If I lose control and tilt, my nemesis wins.",
+      "Use the anger as fuel to play better, not faster.",
     ],
     longTermTip: "If someone tilts you repeatedly, make a note after the session. Identifying the trigger is the first step to defusing it.",
   },
@@ -30,23 +34,25 @@ const TILT_PROFILES = {
     name: 'Entitlement Tilt',
     tagline: '"I\'m too good for this to happen"',
     description:
-      "Your skill level feels like it should guarantee results. When a weaker player wins a hand, it registers as an injustice — and your ego enters the decision-making process.",
+      "Your skill level feels like it should guarantee results. When a weaker player wins a hand, it registers as an injustice, and your ego enters the decision-making process.",
     mentalReset: [
       "Weaker players need to win sometimes, or they'd quit. Their wins fund my long-term income.",
-      "Skill edges play out over thousands of hands — not this single pot.",
+      "Skill edges play out over thousands of hands, not this single pot.",
       "A recreational player winning a hand is not a problem. It's the cost of having them at the table.",
     ],
     longTermTip: "Study variance ranges for your stake. Knowing that even a significant edge loses a large percentage of sessions reframes 'fish winning' as normal.",
   },
   desperation: {
     name: 'Desperation Tilt',
-    tagline: 'Chasing losses — the bankroll killer',
+    tagline: 'Chasing losses, the bankroll killer',
     description:
-      "The urge to recover losses is now overriding strategy. You're forcing plays, sizing up, or playing to get back to zero — and that's the most dangerous state in poker.",
+      "The urge to recover losses is now overriding strategy. You're forcing plays, sizing up, or playing to get back to zero, and that's the most dangerous state in poker.",
     mentalReset: [
       "Every hand is independent. The debt to the poker table doesn't exist.",
-      "The fastest path to recovery is disciplined, process-first decisions — not forcing the issue.",
+      "The fastest path to recovery is disciplined, process-first decisions, not forcing the issue.",
       "My stop-loss rule exists for exactly this moment. Leaving now is the +EV decision.",
+      "Do not let one bad decision become two. Fold and reset.",
+      "Money lost is part of the long-term investment in my edge.",
     ],
     longTermTip: "Hard-code a stop-loss: 3 buy-ins max per session. Treat it as a rule with no exceptions. The sessions where you override it are the ones that wreck bankrolls.",
   },
@@ -54,23 +60,27 @@ const TILT_PROFILES = {
     name: 'Running-Bad Tilt',
     tagline: 'Weeks of losses rewiring your instincts',
     description:
-      "This isn't about today — it's the accumulated weight of an extended bad run. Long downswings can shift your intuition toward 'anything I do ends badly,' which becomes a self-fulfilling leak.",
+      "This isn't about today, it's the accumulated weight of an extended bad run. Long downswings can shift your intuition toward 'anything I do ends badly,' which becomes a self-fulfilling leak.",
     mentalReset: [
       "Extended bad runs are how variance works. They say nothing about my current skill level.",
-      "Playing scared is the only way to make a bad run worse. My edge is still there — use it.",
+      "Playing scared is the only way to make a bad run worse. My edge is still there, use it.",
       "I've recovered from this before. The run is temporary. My game isn't.",
+      "Do not let variance beat me twice by forcing bad play.",
+      "Focus on skill and execution in the short run to win in the long run.",
     ],
-    longTermTip: "Review 10 hands from your last few sessions — not results, just decisions. If your decisions are sound, variance is the cause, not your game. If decisions are slipping, address the specific leak.",
+    longTermTip: "Review 10 hands from your last few sessions, not results, just decisions. If your decisions are sound, variance is the cause, not your game. If decisions are slipping, address the specific leak.",
   },
   winners: {
     name: "Winner's Tilt",
     tagline: 'Up big and playing with "house money"',
     description:
-      "You're ahead and the chips feel like they're not real. Loosening standards when you're winning is just as costly as tilt when losing — profits evaporate through soft calls and wide ranges.",
+      "You're ahead and the chips feel like they're not real. Loosening standards when you're winning is just as costly as tilt when losing, profits evaporate through soft calls and wide ranges.",
     mentalReset: [
       "There is no house money in poker. Every chip in my stack is mine to protect.",
       "The same decision standards that got me here are what keep me here.",
       "Being up big is the worst time to loosen up. The biggest collapses start from the best positions.",
+      "I do not deserve to win every session. I just need to play each hand well.",
+      "Overconfidence is a leak. Discipline preserves the edge.",
     ],
     longTermTip: "Set a 'winning session protocol': when you're up X buy-ins, play your tightest, most disciplined game. The goal is to lock in profits, not gamble with them.",
   },
@@ -78,11 +88,13 @@ const TILT_PROFILES = {
     name: 'Boredom Tilt',
     tagline: 'Card-dead and creating action',
     description:
-      "Being card-dead for a long stretch feels like wasted time. The urge to play any two cards 'just to see something happen' bleeds money quietly — small pot after small pot.",
+      "Being card-dead for a long stretch feels like wasted time. The urge to play any two cards 'just to see something happen' bleeds money quietly, small pot after small pot.",
     mentalReset: [
       "Every hand I fold weak is a bet saved. Discipline during dead stretches is where real money is made.",
-      "Being card-dead is information — not a license to manufacture spots.",
+      "Being card-dead is information, not a license to manufacture spots.",
       "The players who win long-term are the ones who wait. Right now I'm building that discipline.",
+      "Patience is a weapon. Folding is part of edge.",
+      "Playing more hands out of boredom turns me into the fish.",
     ],
     longTermTip: "Track hands played per hour in boring sessions. If it spikes, that's boredom tilt. Some players use this as a signal to take a 5-minute break and reset their attention.",
   },
@@ -111,7 +123,7 @@ export function calculateAccumulatedTilt(sessions) {
 
   if (score >= 55) return {
     score, level: 'high', label: 'High',
-    message: "You've been tilting across multiple recent sessions. Emotional pressure carries over — treat this session as if you're already emotionally elevated.",
+    message: "You've been tilting across multiple recent sessions. Emotional pressure carries over, treat this session as if you're already emotionally elevated.",
   };
   if (score >= 28) return {
     score, level: 'elevated', label: 'Elevated',
@@ -153,35 +165,35 @@ function classifyTiltType({ rushingDecisions, playingLooser, frustrationLevel, c
   const frustrationMid = frustrationLevel >= 5;
   const chaseHigh = chasingLosses >= 6;
 
-  // 1. INJUSTICE — bad beats driving frustration at variance
+  // 1. INJUSTICE - bad beats driving frustration at variance
   s.injustice = (badBeats >= 2 ? 8 : badBeats >= 1 ? 5 : 0)
               + (frustrationHigh && badBeats >= 1 ? 5 : 0);
 
-  // 2. REVENGE — proxy: bluffs failed + rushing + targeted frustration
+  // 2. REVENGE - proxy: bluffs failed + rushing + targeted frustration
   s.revenge = (bluffs >= 2 ? 7 : bluffs >= 1 ? 3 : 0)
             + (rushingHigh && frustrationLevel >= 6 ? 4 : 0)
             + (rushingHigh && badBeats >= 1 ? 2 : 0);
 
-  // 3. ENTITLEMENT — big losses without clear bad-luck events (losing to fish)
+  // 3. ENTITLEMENT - big losses without clear bad-luck events (losing to fish)
   s.entitlement = (bigLosses >= 1 && badBeats === 0 ? 7 : 0)
                 + (frustrationHigh && badBeats === 0 && session.buyInsLost >= 1 ? 5 : 0);
 
-  // 4. DESPERATION — heavy losses + loosening up to get even (bankroll killer)
+  // 4. DESPERATION - heavy losses + loosening up to get even (bankroll killer)
   s.desperation = (session.buyInsLost >= 3 ? 9 : session.buyInsLost >= 2 ? 5 : 0)
                 + (looserHigh && session.buyInsLost >= 2 ? 5 : 0)
                 + (chaseHigh ? 6 : 0);
 
-  // 5. RUNNING BAD — cross-session weight + resigned/scared play
+  // 5. RUNNING BAD - cross-session weight + resigned/scared play
   s.running_bad = accumStr
                 + (frustrationMid ? 3 : 0)
                 + (rushingLow && session.buyInsLost >= 1 ? 2 : 0); // scared money = passive but losing
 
-  // 6. WINNER'S — positive session + standards dropping
+  // 6. WINNER'S - positive session + standards dropping
   s.winners = netPos
     ? (session.netBuyIns >= 2 ? 6 : 3) + (looserHigh ? 6 : 0) + (wonBig >= 1 ? 2 : 0)
     : 0;
 
-  // 7. BOREDOM — long session + low event density + action-seeking
+  // 7. BOREDOM - long session + low event density + action-seeking
   if (sessionDurationMin >= 60 && evPerHour < 2.5 && looserHigh) {
     s.boredom = (sessionDurationMin >= 90 ? 8 : 5) + (evPerHour < 1.5 ? 3 : 0);
   }
@@ -213,7 +225,7 @@ export function runTiltCheck({
   const fr = Number(frustrationLevel ?? 1);
   const chase = Number(chasingLosses ?? 1);
 
-  // ── BEHAVIORAL SCORE (primary signal — can be negative) ───────────────────
+  // ── BEHAVIORAL SCORE (primary signal, can be negative) ───────────────────
   // Self-reported answers are the strongest signal. "No" answers are active evidence
   // of control, not just neutral. They reduce the weight of everything else.
   let behavioralScore = 0;
@@ -291,7 +303,7 @@ export function runTiltCheck({
   let score = Math.max(0, behavioralScore) + Math.round(passiveScore * passiveMultiplier);
 
   // Extreme frustration floor: if frustration is 8+ even with behavioral control,
-  // always surface at least a warning — you may be managing it but it's there.
+  // always surface at least a warning, you may be managing it but it's there.
   if (fr >= 8 && score < 35) score = 35;
 
   score = Math.min(score, 100);
@@ -338,7 +350,7 @@ export function runTiltCheck({
     status = 'clear';
     // Contextual clear: acknowledge risk factors when they're present but managed
     recommendation = passiveContribution >= 8
-      ? "You're managing the session well right now. Risk factors are stacking up in the background — stay alert and check in again if anything shifts."
+      ? "You're managing the session well right now. Risk factors are stacking up in the background, stay alert and check in again if anything shifts."
       : "You're stable right now. Stay focused, trust your process, and keep making solid decisions.";
   }
 
@@ -416,7 +428,7 @@ export function analyzePatterns(sessions) {
     patterns.push({
       type: 'desperation',
       description: 'Losing 2+ buy-ins reliably triggers tilt',
-      insight: 'Enforce a hard 2 buy-in stop-loss. No exceptions — not even "the game is good."',
+      insight: 'Enforce a hard 2 buy-in stop-loss. No exceptions, not even "the game is good."',
       frequency: lossTilt.length,
     });
   }
@@ -455,7 +467,7 @@ export function analyzePatterns(sessions) {
     patterns.push({
       type: 'winners',
       description: "You loosen standards when you're winning",
-      insight: "When up 2+ buy-ins: mentally shift to 'protect mode' — tighter ranges, no marginal calls.",
+      insight: "When up 2+ buy-ins: mentally shift to 'protect mode', tighter ranges, no marginal calls.",
       frequency: winnersTilt.length,
     });
   }

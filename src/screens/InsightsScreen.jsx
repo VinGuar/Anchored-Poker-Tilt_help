@@ -16,7 +16,7 @@ function fmtDate(ts) {
   return new Date(ts).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-export default function InsightsScreen({ sessions, patterns, updateSessionNote }) {
+export default function InsightsScreen({ sessions, patterns, updateSessionNote, deleteSession }) {
   const [expanded, setExpanded] = useState(null);
   const [historyOpen, setHistoryOpen] = useState(true);
   const [editingNoteId, setEditingNoteId] = useState(null);
@@ -133,6 +133,20 @@ export default function InsightsScreen({ sessions, patterns, updateSessionNote }
                               }}
                             >
                               {s.sessionNote ? 'Edit Note' : 'Add Note'}
+                            </button>
+                            <button
+                              className="btn btn-ghost btn-inline"
+                              onClick={() => {
+                                const confirmation = window.confirm('Delete this session? Click OK to confirm.');
+                                if (!confirmation) return;
+                                if (typeof deleteSession === 'function') {
+                                  deleteSession(s.id);
+                                }
+                                setExpanded(null);
+                                setEditingNoteId(null);
+                              }}
+                            >
+                              Delete Session
                             </button>
                           </div>
                         </>

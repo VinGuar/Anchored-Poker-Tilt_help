@@ -19,6 +19,12 @@ export default function ResultScreen({ lastResult, continueSession, requestEndSe
   const gq    = lastResult.gameQuality ?? getGameQuality(lastResult.score);
   const tt    = lastResult.tiltType ?? null;
   const { answers } = lastResult;
+  const mentalResetLines =
+    lastResult.status !== 'clear'
+      ? (lastResult.tiltType?.mentalReset?.length
+          ? lastResult.tiltType.mentalReset
+          : [lastResult.recommendation])
+      : [];
   const coachTitle = lastResult.status === 'tilt'
     ? 'Pause the spiral now.'
     : lastResult.status === 'warning'
@@ -31,8 +37,9 @@ export default function ResultScreen({ lastResult, continueSession, requestEndSe
       : 'You are stable. Use this as your decision-quality baseline.';
 
   return (
-    <div className="screen">
-      <div className={`session-stage ${lastResult.status === 'tilt' ? 'danger' : lastResult.status === 'warning' ? 'warning' : ''}`.trim()}>
+    <div className="screen result-screen">
+      <div className="result-scroll">
+      <div className={`session-stage result-top-stage ${lastResult.status === 'tilt' ? 'danger' : lastResult.status === 'warning' ? 'warning' : ''}`.trim()}>
         <div className="session-stage-label">Coaching Feedback</div>
         <div className="session-stage-title">{coachTitle}</div>
         <div className="session-stage-sub">{coachSub}</div>
@@ -62,7 +69,22 @@ export default function ResultScreen({ lastResult, continueSession, requestEndSe
 
         {/* Left col (or full width if no tilt type) */}
         <div>
-          {/* Your answers */}
+          {/* Mental reset first for warning/tilt */}
+          {mentalResetLines.length > 0 && (
+            <div className={`card mental-reset-card mental-reset-${cfg.recClass}`} style={{ marginBottom: '10px' }}>
+              <div className="card-title">Mental Reset - read out loud</div>
+              {mentalResetLines.map((stmt, i) => (
+                <div key={i} className="mental-reset-line">"{stmt}"</div>
+              ))}
+            </div>
+          )}
+
+          {/* Recommendation */}
+          <div className={`recommendation ${cfg.recClass}`}>
+            <strong>Next best action:</strong> {lastResult.recommendation}
+          </div>
+
+          {/* Your answers (moved below reset) */}
           <div className="card" style={{ marginBottom: '10px' }}>
             <div className="card-title">Your Answers</div>
             {[
@@ -95,17 +117,6 @@ export default function ResultScreen({ lastResult, continueSession, requestEndSe
               ))}
             </div>
           )}
-
-          {/* Recommendation */}
-          <div className={`recommendation ${cfg.recClass}`}>
-            <strong>Next best action:</strong> {lastResult.recommendation}
-          </div>
-
-          {/* Actions */}
-          <div className="actions-stack">
-            <button className="btn btn-primary" onClick={continueSession}>Back to Session</button>
-            <button className="btn btn-ghost" onClick={requestEndSession}>End Session</button>
-          </div>
         </div>
 
         {/* Right col: tilt type + mental reset (desktop only shows this as a column) */}
@@ -134,26 +145,8 @@ export default function ResultScreen({ lastResult, continueSession, requestEndSe
               </div>
 
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
-                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.7px', fontWeight: '700', marginBottom: '10px' }}>
-                  Mental Reset — read one of these
-                </div>
-                {(tt.mentalReset ?? tt.logic ?? []).map((stmt, i, arr) => (
-                  <div key={i} style={{
-                    padding: '10px 14px',
-                    background: 'var(--surface-2)',
-                    borderRadius: '8px',
-                    marginBottom: i < arr.length - 1 ? '7px' : 0,
-                    fontSize: '14px',
-                    lineHeight: '1.55',
-                    borderLeft: '3px solid var(--purple)',
-                    color: 'var(--text)',
-                  }}>
-                    "{stmt}"
-                  </div>
-                ))}
                 {tt.longTermTip && (
                   <div style={{
-                    marginTop: '10px',
                     padding: '10px 14px',
                     background: 'var(--surface-2)',
                     borderRadius: '8px',
@@ -172,6 +165,12 @@ export default function ResultScreen({ lastResult, continueSession, requestEndSe
             </div>
           </div>
         )}
+      </div>
+      </div>
+
+      <div className="result-bottom-nav">
+        <button className="btn btn-primary" onClick={continueSession}>Back to Session</button>
+        <button className="btn btn-ghost" onClick={requestEndSession}>End Session</button>
       </div>
     </div>
   );

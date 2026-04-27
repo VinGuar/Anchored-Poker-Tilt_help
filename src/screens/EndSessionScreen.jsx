@@ -2,11 +2,6 @@ import { useState } from 'react';
 
 export default function EndSessionScreen({ onSaveAndEnd, onSkip, onBack }) {
   const [note, setNote] = useState('');
-  const prompts = [
-    'What was my biggest leak today?',
-    'What helped me reset effectively?',
-    'What one process cue do I use next session?',
-  ];
 
   return (
     <div className="screen">
@@ -20,18 +15,14 @@ export default function EndSessionScreen({ onSaveAndEnd, onSkip, onBack }) {
         <div style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: '1.5', marginBottom: '10px' }}>
           Add a quick note you can review later in history: mental state, key leak, best adjustment, or one intention for next session.
         </div>
-        <div className="prompt-row">
-          {prompts.map((p) => (
-            <button key={p} className="prompt-chip" onClick={() => setNote(prev => (prev ? `${prev}\n• ${p}` : `• ${p}`))}>
-              {p}
-            </button>
-          ))}
+        <div className="note-text" style={{ marginBottom: '10px', color: 'var(--text-secondary)' }}>
+          Examples: biggest leak, what helped reset, best adjustment, next-session cue.
         </div>
         <textarea
           className="note-input"
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="Example: Started rushed after two losses. Reset worked when I paused preflop and named my reason before entering."
+          placeholder="Example: rushed after two losses, paused preflop, next time slow down before entering."
           maxLength={500}
         />
         <div className="note-count">{note.length}/500</div>

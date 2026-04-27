@@ -189,21 +189,12 @@ export default function TiltCheckScreen({ handleCheckComplete, navigate, activeS
                 <button
                   key={n}
                   className={`fr-btn ${frColor(n)} ${answers[q.key] === n ? 'sel' : ''}`}
-                  onClick={() => setAnswers(a => ({ ...a, [q.key]: n }))}
+                  onClick={() => answer(n)}
                 >
                   {n}
                 </button>
               ))}
             </div>
-            {answers[q.key] !== null && (
-              <button
-                className="btn btn-primary"
-                style={{ marginTop: '24px' }}
-                onClick={() => answer(answers[q.key])}
-              >
-                Next →
-              </button>
-            )}
           </>
         )}
       </div>

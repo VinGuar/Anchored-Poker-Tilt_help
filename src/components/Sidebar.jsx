@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import BrandLogo from './BrandLogo';
+import NavIcon from './NavIcon';
 
 function SessionClock({ startTime }) {
   const [elapsed, setElapsed] = useState(Date.now() - startTime);
@@ -15,14 +16,15 @@ function SessionClock({ startTime }) {
     : `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-export default function Sidebar({ screen, navigate, hasActiveSession, accumulatedTilt, activeSession }) {
+export default function Sidebar({ screen, navigate, hasActiveSession, accumulatedTilt, activeSession, onSignOut }) {
   const hideNav = screen === 'tiltcheck' || screen === 'result' || screen === 'presession' || screen === 'endsession';
 
   const navItems = [
-    { id: 'home', icon: '♠', label: 'Home' },
-    { id: 'session', icon: '🃏', label: 'Current Session' },
-    { id: 'insights', icon: '📈', label: 'Insights' },
-    { id: 'learn', icon: '🧠', label: 'Learn' },
+    { id: 'home', label: 'Home' },
+    { id: 'session', label: 'Session' },
+    { id: 'insights', label: 'Insights' },
+    { id: 'learn', label: 'Learn' },
+    { id: 'profile', label: 'Profile' },
   ];
 
   return (
@@ -64,7 +66,7 @@ export default function Sidebar({ screen, navigate, hasActiveSession, accumulate
               className={`sidebar-item ${screen === item.id ? 'active' : ''}`}
               onClick={() => navigate(item.id)}
             >
-              <span className="sidebar-icon">{item.icon}</span>
+              <span className="sidebar-icon"><NavIcon id={item.id} /></span>
               <span>{item.label}</span>
             </button>
           ))}
