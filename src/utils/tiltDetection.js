@@ -133,7 +133,7 @@ export function calculateAccumulatedTilt(sessions) {
 }
 
 // ─── Tilt type classification ──────────────────────────────────────────────────
-function classifyTiltType({ rushingDecisions, playingLooser, frustrationLevel, chasingLosses, session, accumulatedTilt }) {
+function classifyTiltType({ rushingDecisions, playingLooser, frustrationLevel, chasingLosses, session, accumulatedTilt, tiltProfile }) {
   if (!session) return null;
 
   const now              = Date.now();
@@ -199,8 +199,12 @@ function classifyTiltType({ rushingDecisions, playingLooser, frustrationLevel, c
   }
 
   const [topType, topScore] = Object.entries(s).sort((a, b) => b[1] - a[1])[0];
-  if (topScore < 5) return null;
-  return { type: topType, ...TILT_PROFILES[topType] };
+  if (tiltProfile?.personaKey && s[tiltProfile.personaKey] !== undefined) {
+    s[tiltProfile.personaKey] += 2;
+  }
+  const [biasedType, biasedScore] = Object.entries(s).sort((a, b) => b[1] - a[1])[0];
+  if (biasedScore < 5) return null;
+  return { type: biasedType, ...TILT_PROFILES[biasedType] };
 }
 
 // ─── Game quality ─────────────────────────────────────────────────────────────
@@ -218,37 +222,43 @@ export function runTiltCheck({
   chasingLosses,
   session,
   accumulatedTilt,
+  tiltProfile,
 }) {
   const triggers = [];
   const rush = Number(rushingDecisions ?? 1);
   const loose = Number(playingLooser ?? 1);
   const fr = Number(frustrationLevel ?? 1);
   const chase = Number(chasingLosses ?? 1);
+  const questionWeights = tiltProfile?.questionWeights || {};
+  const rushW = Math.max(0.75, Math.min(1.55, Number(questionWeights.rushingDecisions || 1)));
+  const looseW = Math.max(0.75, Math.min(1.55, Number(questionWeights.playingLooser || 1)));
+  const frW = Math.max(0.75, Math.min(1.55, Number(questionWeights.frustrationLevel || 1)));
+  const chaseW = Math.max(0.75, Math.min(1.55, Number(questionWeights.chasingLosses || 1)));
 
   // ── BEHAVIORAL SCORE (primary signal, can be negative) ───────────────────
   // Self-reported answers are the strongest signal. "No" answers are active evidence
   // of control, not just neutral. They reduce the weight of everything else.
   let behavioralScore = 0;
 
-  if (rush >= 8)            { behavioralScore += 30; triggers.push(`Rushed pace (${rush}/10)`); }
-  else if (rush >= 6)       { behavioralScore += 18; triggers.push(`Elevated decision speed (${rush}/10)`); }
-  else if (rush >= 4)       { behavioralScore += 7; }
-  else if (rush <= 2)       { behavioralScore -= 10; }
+  if (rush >= 8)            { behavioralScore += Math.round(30 * rushW); triggers.push(`Rushed pace (${rush}/10)`); }
+  else if (rush >= 6)       { behavioralScore += Math.round(18 * rushW); triggers.push(`Elevated decision speed (${rush}/10)`); }
+  else if (rush >= 4)       { behavioralScore += Math.round(7 * rushW); }
+  else if (rush <= 2)       { behavioralScore -= Math.round(10 * rushW); }
 
-  if (loose >= 8)           { behavioralScore += 30; triggers.push(`Standards drifting significantly (${loose}/10)`); }
-  else if (loose >= 6)      { behavioralScore += 18; triggers.push(`Standards drifting (${loose}/10)`); }
-  else if (loose >= 4)      { behavioralScore += 7; }
-  else if (loose <= 2)      { behavioralScore -= 10; }
+  if (loose >= 8)           { behavioralScore += Math.round(30 * looseW); triggers.push(`Standards drifting significantly (${loose}/10)`); }
+  else if (loose >= 6)      { behavioralScore += Math.round(18 * looseW); triggers.push(`Standards drifting (${loose}/10)`); }
+  else if (loose >= 4)      { behavioralScore += Math.round(7 * looseW); }
+  else if (loose <= 2)      { behavioralScore -= Math.round(10 * looseW); }
 
-  if (fr >= 8)          { behavioralScore += 45; triggers.push(`High emotional activation (${fr}/10)`); }
-  else if (fr >= 6)     { behavioralScore += 25; triggers.push(`Elevated frustration (${fr}/10)`); }
-  else if (fr >= 4)     { behavioralScore += 8; }
-  else if (fr <= 2)     { behavioralScore -= 12; }
+  if (fr >= 8)          { behavioralScore += Math.round(45 * frW); triggers.push(`High emotional activation (${fr}/10)`); }
+  else if (fr >= 6)     { behavioralScore += Math.round(25 * frW); triggers.push(`Elevated frustration (${fr}/10)`); }
+  else if (fr >= 4)     { behavioralScore += Math.round(8 * frW); }
+  else if (fr <= 2)     { behavioralScore -= Math.round(12 * frW); }
 
-  if (chase >= 8)        { behavioralScore += 26; triggers.push(`Strong urgency to win/get unstuck (${chase}/10)`); }
-  else if (chase >= 6)   { behavioralScore += 15; triggers.push(`Recovery urgency present (${chase}/10)`); }
-  else if (chase >= 4)   { behavioralScore += 5; }
-  else if (chase <= 2)   { behavioralScore -= 8; }
+  if (chase >= 8)        { behavioralScore += Math.round(26 * chaseW); triggers.push(`Strong urgency to win/get unstuck (${chase}/10)`); }
+  else if (chase >= 6)   { behavioralScore += Math.round(15 * chaseW); triggers.push(`Recovery urgency present (${chase}/10)`); }
+  else if (chase >= 4)   { behavioralScore += Math.round(5 * chaseW); }
+  else if (chase <= 2)   { behavioralScore -= Math.round(8 * chaseW); }
 
   // ── PASSIVE SCORE (context / risk factors) ────────────────────────────────
   // These are real warning signs but cannot override a clean self-report.
@@ -263,6 +273,12 @@ export function runTiltCheck({
   }
 
   if (session) {
+    const triggerWeights = tiltProfile?.triggerWeights || {};
+    const bbWeight = Number(triggerWeights.bad_beat || 1);
+    const blWeight = Number(triggerWeights.big_loss || 1);
+    const blfWeight = Number(triggerWeights.bluff_failed || 1);
+    const wonWeight = Number(triggerWeights.won_big || 1);
+
     if (session.buyInsLost >= 3)      { passiveScore += 12; triggers.push(`Lost ${session.buyInsLost} buy-ins this session`); }
     else if (session.buyInsLost >= 2) { passiveScore +=  7; triggers.push(`Down ${session.buyInsLost} buy-ins`); }
 
@@ -272,14 +288,20 @@ export function runTiltCheck({
     const bl   = r30.filter(e => e.type === 'big_loss').length;
     const blf  = r30.filter(e => e.type === 'bluff_failed').length;
 
-    if (bb >= 2)        { passiveScore +=  8; triggers.push(`${bb} bad beats in last 30 min`); }
-    else if (bb === 1)  { passiveScore +=  3; triggers.push('Bad beat this session'); }
+    if (bb >= 2)        { passiveScore +=  Math.round(8 * bbWeight); triggers.push(`${bb} bad beats in last 30 min`); }
+    else if (bb === 1)  { passiveScore +=  Math.round(3 * bbWeight); triggers.push('Bad beat this session'); }
 
-    if (bl >= 2)        { passiveScore +=  7; triggers.push(`${bl} big pot losses recently`); }
-    else if (bl === 1)  { passiveScore +=  2; triggers.push('Big pot loss this session'); }
+    if (bl >= 2)        { passiveScore +=  Math.round(7 * blWeight); triggers.push(`${bl} big pot losses recently`); }
+    else if (bl === 1)  { passiveScore +=  Math.round(2 * blWeight); triggers.push('Big pot loss this session'); }
 
-    if (blf >= 2)       { passiveScore +=  5; triggers.push(`${blf} failed bluffs recently`); }
-    else if (blf === 1) { passiveScore +=  2; triggers.push('Failed bluff this session'); }
+    if (blf >= 2)       { passiveScore +=  Math.round(5 * blfWeight); triggers.push(`${blf} failed bluffs recently`); }
+    else if (blf === 1) { passiveScore +=  Math.round(2 * blfWeight); triggers.push('Failed bluff this session'); }
+
+    const wonBig = r30.filter(e => e.type === 'won_big').length;
+    if (wonBig >= 2 && (tiltProfile?.personaKey === 'winners' || wonWeight > 1.2)) {
+      passiveScore += Math.round(4 * wonWeight);
+      triggers.push('Momentum spike while winning');
+    }
 
     const negTypes = [bb > 0, bl > 0, blf > 0].filter(Boolean).length;
     if (negTypes >= 2)         { passiveScore += 4; triggers.push('Multiple types of negative events'); }
@@ -310,7 +332,7 @@ export function runTiltCheck({
 
   // ── TILT TYPE + RECOMMENDATION ────────────────────────────────────────────
   const tiltType = score >= 35
-    ? classifyTiltType({ rushingDecisions: rush, playingLooser: loose, frustrationLevel: fr, chasingLosses: chase, session, accumulatedTilt })
+    ? classifyTiltType({ rushingDecisions: rush, playingLooser: loose, frustrationLevel: fr, chasingLosses: chase, session, accumulatedTilt, tiltProfile })
     : null;
 
   const passiveContribution = Math.round(passiveScore * passiveMultiplier);
@@ -358,27 +380,41 @@ export function runTiltCheck({
     score, status, triggers, recommendation,
     timestamp: Date.now(),
     answers: { rushingDecisions: rush, playingLooser: loose, frustrationLevel: fr, chasingLosses: chase },
+    profileWeighting: {
+      questions: { rushingDecisions: rushW, playingLooser: looseW, frustrationLevel: frW, chasingLosses: chaseW },
+      events: tiltProfile?.triggerWeights || null,
+    },
     tiltType,
     gameQuality: getGameQuality(score),
   };
 }
 
 // ─── Passive in-session detection ─────────────────────────────────────────────
-export function detectPassiveTilt(session) {
+export function detectPassiveTilt(session, tiltProfile = null) {
   if (!session) return null;
   let score = 0;
   const triggers = [];
+  const triggerWeights = tiltProfile?.triggerWeights || {};
+  const bbWeight = Number(triggerWeights.bad_beat || 1);
+  const blWeight = Number(triggerWeights.big_loss || 1);
+  const blfWeight = Number(triggerWeights.bluff_failed || 1);
+  const wonWeight = Number(triggerWeights.won_big || 1);
 
-  if (session.buyInsLost >= 3)      { score += 50; triggers.push(`Lost ${session.buyInsLost} buy-ins`); }
-  else if (session.buyInsLost >= 2) { score += 25; triggers.push(`Down ${session.buyInsLost} buy-ins`); }
+  if (session.buyInsLost >= 3)      { score += Math.round(50 * blWeight); triggers.push(`Lost ${session.buyInsLost} buy-ins`); }
+  else if (session.buyInsLost >= 2) { score += Math.round(25 * blWeight); triggers.push(`Down ${session.buyInsLost} buy-ins`); }
 
   const now = Date.now();
   const bb = session.events.filter(e => e.type === 'bad_beat'     && now - e.timestamp < 30 * 60 * 1000).length;
   const bf = session.events.filter(e => e.type === 'bluff_failed' && now - e.timestamp < 20 * 60 * 1000).length;
 
-  if (bb >= 2)                             { score += 30; triggers.push(`${bb} bad beats in 30 min`); }
-  else if (bb === 1 && session.buyInsLost >= 1) { score += 15; triggers.push('Bad beat while already down'); }
-  if (bf >= 2)                             { score += 15; triggers.push('Multiple failed bluffs'); }
+  const wb = session.events.filter(e => e.type === 'won_big' && now - e.timestamp < 30 * 60 * 1000).length;
+  if (bb >= 2)                             { score += Math.round(30 * bbWeight); triggers.push(`${bb} bad beats in 30 min`); }
+  else if (bb === 1 && session.buyInsLost >= 1) { score += Math.round(15 * bbWeight); triggers.push('Bad beat while already down'); }
+  if (bf >= 2)                             { score += Math.round(15 * blfWeight); triggers.push('Multiple failed bluffs'); }
+  if (wb >= 2 && (tiltProfile?.personaKey === 'winners' || wonWeight > 1.2)) {
+    score += Math.round(12 * wonWeight);
+    triggers.push('Winning momentum increasing overconfidence risk');
+  }
 
   // Pre-session risk amplifier
   if (session.preSessionState?.energy === 'low' || session.preSessionState?.stress === 'high') {

@@ -1,6 +1,6 @@
 import BrandLogo from '../components/BrandLogo';
 
-export default function HomeScreen({ sessions, startSession, patterns, accumulatedTilt }) {
+export default function HomeScreen({ sessions, startSession, patterns, accumulatedTilt, hasPremium, navigate, tiltProfileReport, user }) {
   const totalSessions = sessions.length;
   // Tilt rate = % of sessions where tilt was detected at least once.
   // Per-check would shrink the rate just for checking in more often — wrong signal.
@@ -22,6 +22,33 @@ export default function HomeScreen({ sessions, startSession, patterns, accumulat
         </div>
       </div>
 
+      {!user?.id && (
+        <div className="card" style={{ marginTop: '2px' }}>
+          <div className="card-title">Create account or sign in</div>
+          <div className="note-text" style={{ marginBottom: '10px' }}>
+            Create a free account to use core features, save progress, and build your personalized tilt profile.
+          </div>
+          <button className="btn btn-primary" onClick={() => navigate('auth')}>
+            Create Account / Sign In
+          </button>
+        </div>
+      )}
+
+      <div className="card" style={{ marginTop: '2px' }}>
+        <div className="card-title">Personal Tilt Profile</div>
+        <div className="note-text" style={{ marginBottom: '10px' }}>
+          Build your personal tilt persona for free. The full report is premium.
+        </div>
+        {tiltProfileReport && (
+          <div className="session-note" style={{ marginBottom: '10px' }}>
+            <strong>Latest result:</strong> {tiltProfileReport.profileType} ({tiltProfileReport.riskBand})
+          </div>
+        )}
+        <button className={`btn ${hasPremium ? 'btn-primary' : 'btn-secondary'}`} onClick={() => navigate('tiltprofile')}>
+          {tiltProfileReport ? 'Open Tilt Profile Report' : 'Create Tilt Profile'}
+        </button>
+      </div>
+
       <div className="focus-panel">
         <div className="focus-eyebrow">Session Readiness</div>
         <div className="focus-title">
@@ -41,26 +68,6 @@ export default function HomeScreen({ sessions, startSession, patterns, accumulat
         <button className={`btn ${pressureState === 'high' ? 'btn-warning' : 'btn-primary'}`} onClick={startSession}>
           {pressureState === 'high' ? 'Go to Current Session' : 'Go to Current Session'}
         </button>
-      </div>
-
-      <div className="card app-explainer-card" style={{ marginTop: '2px' }}>
-        <div className="card-title">How Anchored helps</div>
-        <div className="app-explainer-points">
-          {[
-            { icon: '⚡', title: 'Catch tilt early', text: 'Quick check-ins flag drift before it costs EV.' },
-            { icon: '🧭', title: 'Reset your process', text: 'Simple prompts keep decisions intentional.' },
-            { icon: '📝', title: 'Track key moments', text: 'Log events and notes in real time.' },
-            { icon: '📈', title: 'Improve over time', text: 'Session history surfaces repeat patterns.' },
-          ].map((item, idx) => (
-            <div key={idx} className="app-explainer-item">
-              <span className="app-explainer-icon">{item.icon}</span>
-              <div className="app-explainer-copy">
-                <div className="app-explainer-title">{item.title}</div>
-                <div className="app-explainer-text">{item.text}</div>
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
 
       {totalSessions > 0 && (

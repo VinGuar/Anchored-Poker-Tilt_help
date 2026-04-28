@@ -3,6 +3,7 @@ import { runTiltCheck, analyzePatterns, calculateAccumulatedTilt } from './utils
 import { getCurrentSession, getCurrentUser, onAuthStateChange, signOut } from './services/authService';
 import { createSession, deleteSessionById, fetchMySessions, updateSession } from './services/sessionsService';
 import { getMySettings, upsertMySettings } from './services/settingsService';
+import { getMonetizationState, updateMonetizationState } from './services/monetizationService';
 import BottomNav from './components/BottomNav';
 import Sidebar from './components/Sidebar';
 import HomeScreen from './screens/HomeScreen';
@@ -18,6 +19,9 @@ import InsightsScreen from './screens/InsightsScreen';
 import LearnScreen from './screens/LearnScreen';
 import AuthScreen from './screens/AuthScreen';
 import ProfileScreen from './screens/ProfileScreen';
+import PaywallScreen from './screens/PaywallScreen';
+import TiltProfileScreen from './screens/TiltProfileScreen';
+import TiltProfileReportScreen from './screens/TiltProfileReportScreen';
 
 export default function App() {
   const [authReady, setAuthReady] = useState(false);
@@ -31,6 +35,11 @@ export default function App() {
   const [authPrompt, setAuthPrompt] = useState('');
   const [appNotice, setAppNotice] = useState('');
   const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const [hasPremium, setHasPremium] = useState(false);
+  const [tiltProfileInput, setTiltProfileInput] = useState(null);
+  const [tiltProfileReport, setTiltProfileReport] = useState(null);
+  const [paywallContext, setPaywallContext] = useState('premium');
+  const [paywallReturnScreen, setPaywallReturnScreen] = useState('home');
 
   useEffect(() => {
     let mounted = true;
@@ -152,6 +161,9 @@ export default function App() {
       setTheme('dark');
       setActiveSession(null);
       setLastResult(null);
+      setHasPremium(false);
+      setTiltProfileInput(null);
+      setTiltProfileReport(null);
       if (screen === 'profile') setScreen('home');
       return;
     }
@@ -177,9 +189,30 @@ export default function App() {
         setPreSessionNote('');
         setTheme('dark');
       });
+    const monetization = getMonetizationState(user.id);
+    setHasPremium(Boolean(monetization.premium));
+    setTiltProfileInput(monetization.tiltProfileInput || null);
+    setTiltProfileReport(monetization.tiltProfileReport || null);
     setLastResult(null);
     if (screen === 'auth') setScreen('home');
   }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    if (tiltProfileInput) return;
+    if (activeSession) return;
+    if (screen === 'home' || screen === 'auth') {
+      setScreen('tiltprofile');
+    }
+  }, [user?.id, tiltProfileInput, activeSession, screen]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    if (screen !== 'tiltprofile') return;
+    if (tiltProfileInput && tiltProfileReport) {
+      setScreen('tiltprofile-report');
+    }
+  }, [user?.id, screen, tiltProfileInput, tiltProfileReport]);
 
   const requireAuth = (message = 'Please log in or create an account to continue.') => {
     if (user?.id) return true;
@@ -198,7 +231,38 @@ export default function App() {
       setScreen('auth');
       return;
     }
+    if (to === 'tiltprofile') {
+      if (!user?.id) {
+        setAuthPrompt('Create an account to build your tilt profile.');
+        setScreen('auth');
+        return;
+      }
+      if (tiltProfileInput && tiltProfileReport) {
+        setScreen('tiltprofile-report');
+        return;
+      }
+      setScreen('tiltprofile');
+      return;
+    }
     setScreen(to);
+  };
+
+  const openPaywall = (context = 'premium', returnScreen = screen) => {
+    setPaywallContext(context);
+    setPaywallReturnScreen(returnScreen);
+    setScreen('paywall');
+  };
+
+  const activatePremium = () => {
+    if (!user?.id) {
+      setAuthPrompt('Create an account to activate premium.');
+      setScreen('auth');
+      return;
+    }
+    const next = updateMonetizationState(user.id, { premium: true });
+    setHasPremium(Boolean(next.premium));
+    setScreen(paywallReturnScreen || 'home');
+    notify('Premium unlocked. You now have full access.');
   };
 
   const startSession = () => {
@@ -301,9 +365,13 @@ export default function App() {
   };
 
   const handleCheckComplete = (answers) => {
+    if (!hasPremium) {
+      openPaywall('tilt_check', 'session');
+      return;
+    }
     if (!requireAuth('Create an account to save check-ins.')) return;
     const accumulatedTilt = calculateAccumulatedTilt(sessions);
-    const result = runTiltCheck({ ...answers, session: activeSession, accumulatedTilt });
+    const result = runTiltCheck({ ...answers, session: activeSession, accumulatedTilt, tiltProfile: tiltProfileReport });
     const checkEntry = { timestamp: Date.now(), answers, result };
     setActiveSession(prev => {
       if (!prev) return prev;
@@ -317,6 +385,13 @@ export default function App() {
 
   const continueSession = () => setScreen('session');
   const requestEndSession = () => setScreen('endsession');
+  const requestTiltCheck = () => {
+    if (!hasPremium) {
+      openPaywall('tilt_check', 'session');
+      return;
+    }
+    setScreen('tiltcheck');
+  };
 
   const endSession = (sessionNote = '') => {
     if (!requireAuth('Create an account to save session notes and history.')) return;
@@ -381,6 +456,16 @@ export default function App() {
     });
   };
 
+  const saveTiltProfile = (input, report) => {
+    if (!requireAuth('Create an account to save your tilt profile.')) return;
+    const next = updateMonetizationState(user.id, {
+      tiltProfileInput: input,
+      tiltProfileReport: report,
+    });
+    setTiltProfileInput(next.tiltProfileInput || null);
+    setTiltProfileReport(next.tiltProfileReport || null);
+  };
+
   const handleSignOut = async () => {
     await signOut();
     setScreen('home');
@@ -402,6 +487,7 @@ export default function App() {
     deleteEvent,
     updateBuyIns,
     handleCheckComplete,
+    requestTiltCheck,
     continueSession,
     requestEndSession,
     endSession,
@@ -412,6 +498,11 @@ export default function App() {
     theme,
     updateTheme,
     user,
+    hasPremium,
+    tiltProfileInput,
+    tiltProfileReport,
+    openPaywall,
+    saveTiltProfile,
     onSignOut: handleSignOut,
   };
 
@@ -457,8 +548,44 @@ export default function App() {
                 startCheckIn={startCheckIn}
               />
         )}
-        {screen === 'tiltcheck'  && <TiltCheckScreen  {...sharedProps} />}
-        {screen === 'result'     && <ResultScreen     {...sharedProps} />}
+        {screen === 'tiltprofile' && (
+          <TiltProfileScreen
+            onBack={() => setScreen('home')}
+            savedInput={tiltProfileInput}
+            onSaveProfile={saveTiltProfile}
+            onComplete={() => setScreen('tiltprofile-report')}
+            requiredSetup={!!user?.id && !tiltProfileInput}
+          />
+        )}
+        {screen === 'tiltprofile-edit' && (
+          <TiltProfileScreen
+            onBack={() => setScreen('tiltprofile-report')}
+            savedInput={tiltProfileInput}
+            onSaveProfile={saveTiltProfile}
+            onComplete={() => setScreen('tiltprofile-report')}
+            requiredSetup={false}
+            resetOnRedo
+          />
+        )}
+        {screen === 'tiltprofile-report' && (
+          <TiltProfileReportScreen
+            tiltProfileReport={tiltProfileReport}
+            hasPremium={hasPremium}
+            onBack={() => setScreen('insights')}
+            onUnlock={() => openPaywall('tilt_profile_report', 'tiltprofile-report')}
+            onRedo={() => setScreen('tiltprofile-edit')}
+          />
+        )}
+        {screen === 'paywall' && (
+          <PaywallScreen
+            source={paywallContext}
+            onUpgrade={activatePremium}
+            onBack={() => setScreen(paywallReturnScreen || 'home')}
+            canSkip={paywallContext !== 'tilt_profile_report'}
+          />
+        )}
+        {screen === 'tiltcheck'  && (hasPremium ? <TiltCheckScreen {...sharedProps} /> : <PaywallScreen source="tilt_check" onUpgrade={activatePremium} onBack={() => setScreen('session')} canSkip />)}
+        {screen === 'result'     && (hasPremium ? <ResultScreen {...sharedProps} /> : <PaywallScreen source="tilt_check" onUpgrade={activatePremium} onBack={() => setScreen('session')} canSkip />)}
         {screen === 'endsession' && (
           <EndSessionScreen
             onSaveAndEnd={(note) => endSession(note)}
@@ -478,7 +605,7 @@ export default function App() {
         {screen === 'auth'       && (
           <AuthScreen
             title="Log In or Sign Up"
-            subtitle={authPrompt || 'Create an account when you are ready to save sessions, notes, and progress.'}
+            subtitle={authPrompt || 'Create your free account to use session tools and build your personal tilt profile.'}
             onBack={() => setScreen('home')}
           />
         )}

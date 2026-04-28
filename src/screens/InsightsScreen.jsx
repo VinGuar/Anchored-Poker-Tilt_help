@@ -34,7 +34,7 @@ function fmtDate(ts) {
   return new Date(ts).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-export default function InsightsScreen({ sessions, patterns, updateSessionNote, deleteSession }) {
+export default function InsightsScreen({ sessions, patterns, updateSessionNote, deleteSession, tiltProfileReport, hasPremium, navigate }) {
   const [expanded, setExpanded] = useState(null);
   const [historyOpen, setHistoryOpen] = useState(true);
   const [editingNoteId, setEditingNoteId] = useState(null);
@@ -88,6 +88,60 @@ export default function InsightsScreen({ sessions, patterns, updateSessionNote, 
           ))}
         </>
       )}
+
+      <div className="card">
+        <div className="card-title">Tilt Profile Report</div>
+        {!tiltProfileReport ? (
+          <>
+            <div className="note-text" style={{ marginBottom: '8px' }}>
+              You have not created your tilt profile yet.
+            </div>
+            <button className="btn btn-secondary btn-inline" onClick={() => navigate?.('tiltprofile')}>
+              Create Tilt Profile
+            </button>
+          </>
+        ) : !hasPremium ? (
+          <>
+            <div className="note-text" style={{ marginBottom: '8px' }}>
+              Report exists but full details are premium.
+            </div>
+            <div className="session-note" style={{ marginBottom: '8px' }}>
+              <strong>Preview:</strong> {tiltProfileReport.summary}
+            </div>
+            <div className="legal-copy" style={{ marginBottom: '8px' }}>
+              Includes 3-day free trial. Then $3.99/week or $13.99/month.
+            </div>
+            <button className="btn btn-secondary btn-inline" onClick={() => navigate?.('tiltprofile-report')}>
+              Open Report
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="session-note" style={{ marginBottom: '8px' }}>
+              <strong>{tiltProfileReport.personaAlias || 'Player'}</strong> - {tiltProfileReport.profileType} ({tiltProfileReport.riskBand})
+            </div>
+            <div className="trigger-item">
+              <div className="trigger-dot" style={{ background: tiltProfileReport.riskScore >= 70 ? 'var(--red)' : tiltProfileReport.riskScore >= 45 ? 'var(--yellow)' : 'var(--green)' }} />
+              <span style={{ flex: 1 }}>Risk score</span>
+              <strong>{tiltProfileReport.riskScore} / 100</strong>
+            </div>
+            {tiltProfileReport.tiltMechanism && (
+              <div className="session-note" style={{ marginTop: '8px' }}>
+                <strong>Persona mechanism:</strong> {tiltProfileReport.tiltMechanism}
+              </div>
+            )}
+            {(tiltProfileReport.recommendations || []).slice(0, 2).map((rec, idx) => (
+              <div key={`tilt-rec-${idx}`} className="trigger-item">
+                <div className="trigger-dot" style={{ background: 'var(--purple)' }} />
+                {rec}
+              </div>
+            ))}
+            <button className="btn btn-secondary btn-inline" style={{ marginTop: '8px' }} onClick={() => navigate?.('tiltprofile-report')}>
+              View Full Report
+            </button>
+          </>
+        )}
+      </div>
 
       <div className="history-shell">
         <button className="history-toggle" onClick={() => setHistoryOpen(prev => !prev)}>

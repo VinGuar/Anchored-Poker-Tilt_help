@@ -28,9 +28,20 @@ function fmtTime(ts) {
   return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-export default function SessionScreen({ activeSession, logEvent, editEvent, deleteEvent, updateBuyIns, navigate, requestEndSession, accumulatedTilt }) {
+export default function SessionScreen({
+  activeSession,
+  logEvent,
+  editEvent,
+  deleteEvent,
+  updateBuyIns,
+  requestTiltCheck,
+  requestEndSession,
+  accumulatedTilt,
+  hasPremium,
+  tiltProfileReport,
+}) {
   const timer = useTimer(activeSession.startTime);
-  const passive = detectPassiveTilt(activeSession);
+  const passive = detectPassiveTilt(activeSession, tiltProfileReport);
   const net = activeSession.netBuyIns;
   const recentEvents = activeSession.events
     .map((ev, idx) => ({ ...ev, _idx: idx }))
@@ -130,7 +141,7 @@ export default function SessionScreen({ activeSession, logEvent, editEvent, dele
       </div>
 
       {/* Last check result pill */}
-      {lastCheck && (
+      {hasPremium && lastCheck && (
         <div className="content-wrap" style={{ marginBottom: '10px' }}>
           <div className={`chip ${
             lastCheck.result.status === 'tilt'
@@ -145,7 +156,7 @@ export default function SessionScreen({ activeSession, logEvent, editEvent, dele
         </div>
       )}
 
-      {resetLines.length > 0 && (
+      {hasPremium && resetLines.length > 0 && (
         <div className="content-wrap" style={{ marginBottom: '10px' }}>
           <div className={`mental-reset-session ${lastCheck.result.status === 'tilt' ? 'danger' : 'warning'}`}>
             <div className="mental-reset-session-title">Mental Reset</div>
@@ -296,13 +307,21 @@ export default function SessionScreen({ activeSession, logEvent, editEvent, dele
 
       <div className="spacer" />
 
+      {!hasPremium && (
+        <div className="content-wrap" style={{ marginBottom: '10px' }}>
+          <div className="session-note">
+            Tilt score, mental reset coaching, and intervention outputs are premium.
+          </div>
+        </div>
+      )}
+
       {/* Persistent check CTA */}
       <div className="session-check-dock">
         <button
           className={`btn session-check-btn ${passive ? 'btn-danger' : stage.cls === 'warning' ? 'btn-warning' : 'btn-primary'}`}
-          onClick={() => navigate('tiltcheck')}
+          onClick={requestTiltCheck}
         >
-          {passive ? 'Immediate Intervention Check' : stage.cta}
+          {!hasPremium ? 'Unlock Tilt Check' : passive ? 'Immediate Intervention Check' : stage.cta}
         </button>
       </div>
 

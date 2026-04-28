@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import BrandLogo from '../components/BrandLogo';
-import { signInWithEmail, signUpWithEmail } from '../services/authService';
+import { signInWithEmail, signInWithGoogle, signUpWithEmail } from '../services/authService';
 import { APP_META } from '../config/appMeta';
 
 export default function AuthScreen({ title = 'Log In', subtitle = '', onBack }) {
@@ -31,6 +31,25 @@ export default function AuthScreen({ title = 'Log In', subtitle = '', onBack }) 
       }
     } catch (err) {
       setError(err.message || 'Authentication failed.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const continueWithGoogle = async () => {
+    setError('');
+    setInfo('');
+    setBusy(true);
+    try {
+      await signInWithGoogle();
+      setInfo('Redirecting to Google...');
+    } catch (err) {
+      const raw = String(err?.message || '');
+      if (raw.toLowerCase().includes('provider is not enabled') || raw.toLowerCase().includes('unsupported provider')) {
+        setError('Google sign-in is not enabled in Supabase yet. Enable Google under Supabase Auth > Providers, then add your Google OAuth client ID/secret.');
+      } else {
+        setError(raw || 'Google sign-in failed.');
+      }
     } finally {
       setBusy(false);
     }
@@ -72,6 +91,14 @@ export default function AuthScreen({ title = 'Log In', subtitle = '', onBack }) 
             {busy ? 'Please wait...' : isSignUp ? 'Create Account' : 'Log In'}
           </button>
         </form>
+        <button
+          className="btn btn-secondary"
+          style={{ marginTop: '8px' }}
+          onClick={continueWithGoogle}
+          disabled={busy}
+        >
+          Continue with Google
+        </button>
         <button
           className="btn btn-ghost"
           style={{ marginTop: '8px' }}

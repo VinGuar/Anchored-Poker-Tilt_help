@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { deleteMyAccount, updateAuthEmail, updateAuthPassword } from '../services/authService';
 import { APP_META } from '../config/appMeta';
 
-export default function ProfileScreen({ user, theme = 'dark', updateTheme, onSignOut }) {
+export default function ProfileScreen({ user, theme = 'dark', updateTheme, onSignOut, hasPremium, openPaywall }) {
   const [email, setEmail] = useState(user?.email || '');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -110,6 +110,18 @@ export default function ProfileScreen({ user, theme = 'dark', updateTheme, onSig
             Light
           </button>
         </div>
+      </div>
+
+      <div className="card">
+        <div className="card-title">Plan</div>
+        <div className="note-text" style={{ marginBottom: '10px' }}>
+          Current plan: <strong>{hasPremium ? 'Premium' : 'Free'}</strong>
+        </div>
+        {!hasPremium && (
+          <button className="btn btn-primary" onClick={() => openPaywall?.('premium', 'profile')}>
+            Upgrade to Premium
+          </button>
+        )}
       </div>
 
       <div className="card">
