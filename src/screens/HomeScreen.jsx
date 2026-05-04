@@ -34,20 +34,6 @@ export default function HomeScreen({ sessions, startSession, patterns, accumulat
         </div>
       )}
 
-      <div className="card" style={{ marginTop: '2px' }}>
-        <div className="card-title">Personal Tilt Profile</div>
-        <div className="note-text" style={{ marginBottom: '10px' }}>
-          Build your personal tilt persona for free. The full report is premium.
-        </div>
-        {tiltProfileReport && (
-          <div className="session-note" style={{ marginBottom: '10px' }}>
-            <strong>Latest result:</strong> {tiltProfileReport.profileType} ({tiltProfileReport.riskBand})
-          </div>
-        )}
-        <button className={`btn ${hasPremium ? 'btn-primary' : 'btn-secondary'}`} onClick={() => navigate('tiltprofile')}>
-          {tiltProfileReport ? 'Open Tilt Profile Report' : 'Create Tilt Profile'}
-        </button>
-      </div>
 
       <div className="focus-panel">
         <div className="focus-eyebrow">Session Readiness</div>
@@ -69,6 +55,18 @@ export default function HomeScreen({ sessions, startSession, patterns, accumulat
           {pressureState === 'high' ? 'Go to Current Session' : 'Go to Current Session'}
         </button>
       </div>
+
+      {user?.id && tiltProfileReport && (
+        <div className="card">
+          <div className="card-title">Personal Tilt Profile</div>
+          <div className="session-note" style={{ marginBottom: '10px' }}>
+            <strong>Latest result:</strong> {tiltProfileReport.profileType} ({tiltProfileReport.riskBand})
+          </div>
+          <button className={`btn ${hasPremium ? 'btn-primary' : 'btn-secondary'}`} onClick={() => navigate('tiltprofile')}>
+            Open Tilt Profile Report
+          </button>
+        </div>
+      )}
 
       {totalSessions > 0 && (
         <div className="stat-row">

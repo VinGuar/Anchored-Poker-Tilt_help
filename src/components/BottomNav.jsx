@@ -8,7 +8,7 @@ export default function BottomNav({ screen, navigate, hasActiveSession }) {
     { id: 'session', label: 'Session' },
     { id: 'insights', label: 'Insights' },
     { id: 'learn', label: 'Learn' },
-    { id: 'profile', label: 'Profile' },
+    { id: 'profile', label: 'Settings' },
   ];
 
   return (

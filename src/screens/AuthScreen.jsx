@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import HCaptcha from '@hcaptcha/react-hcaptcha';
 import BrandLogo from '../components/BrandLogo';
 import { signInWithEmail, signInWithGoogle, signUpWithEmail } from '../services/authService';
 import { APP_META } from '../config/appMeta';
+
+const HCAPTCHA_SITEKEY = import.meta.env.DEV ? '' : (import.meta.env.VITE_HCAPTCHA_SITEKEY || '');
 
 export default function AuthScreen({ title = 'Log In', subtitle = '', onBack }) {
   const [mode, setMode] = useState('signin');
@@ -11,29 +14,68 @@ export default function AuthScreen({ title = 'Log In', subtitle = '', onBack }) 
   const [info, setInfo] = useState('');
   const [busy, setBusy] = useState(false);
 
+  const captchaRef = useRef(null);
+  const pendingAuthRef = useRef(null);
+
   const isSignUp = mode === 'signup';
 
-  const submit = async (e) => {
+  const submit = (e) => {
     e.preventDefault();
     setError('');
     setInfo('');
     setBusy(true);
+    pendingAuthRef.current = { email: email.trim(), password, isSignUp };
+    if (HCAPTCHA_SITEKEY) {
+      captchaRef.current?.execute();
+    } else {
+      runAuth(null);
+    }
+  };
+
+  const runAuth = async (captchaToken) => {
+    const pending = pendingAuthRef.current;
+    pendingAuthRef.current = null;
+    if (!pending) return;
     try {
-      if (isSignUp) {
-        const data = await signUpWithEmail(email.trim(), password);
+      if (pending.isSignUp) {
+        const data = await signUpWithEmail(pending.email, pending.password, captchaToken);
         if (!data.session) {
           setInfo('Account created. Check your email and confirm before signing in.');
         } else {
           setInfo('Account created and signed in.');
         }
       } else {
-        await signInWithEmail(email.trim(), password);
+        await signInWithEmail(pending.email, pending.password, captchaToken);
       }
     } catch (err) {
-      setError(err.message || 'Authentication failed.');
+      const msg = String(err?.message || '').toLowerCase();
+      if (msg.includes('already registered') || msg.includes('already exists') || msg.includes('user already')) {
+        setError('An account with this email already exists. Try logging in, or use Google sign-in if you registered with Google.');
+      } else if (msg.includes('invalid login') || msg.includes('invalid credentials')) {
+        setError('Incorrect email or password.');
+      } else {
+        setError(err.message || 'Authentication failed.');
+      }
     } finally {
       setBusy(false);
+      captchaRef.current?.resetCaptcha();
     }
+  };
+
+  const handleCaptchaVerify = (token) => {
+    runAuth(token);
+  };
+
+  const handleCaptchaError = () => {
+    pendingAuthRef.current = null;
+    setBusy(false);
+    setError('CAPTCHA verification failed. Please try again.');
+    captchaRef.current?.resetCaptcha();
+  };
+
+  const handleCaptchaExpire = () => {
+    pendingAuthRef.current = null;
+    captchaRef.current?.resetCaptcha();
   };
 
   const continueWithGoogle = async () => {
@@ -91,6 +133,18 @@ export default function AuthScreen({ title = 'Log In', subtitle = '', onBack }) 
             {busy ? 'Please wait...' : isSignUp ? 'Create Account' : 'Log In'}
           </button>
         </form>
+
+        {HCAPTCHA_SITEKEY && (
+          <HCaptcha
+            ref={captchaRef}
+            sitekey={HCAPTCHA_SITEKEY}
+            size="invisible"
+            onVerify={handleCaptchaVerify}
+            onError={handleCaptchaError}
+            onExpire={handleCaptchaExpire}
+          />
+        )}
+
         <button
           className="btn btn-secondary"
           style={{ marginTop: '8px' }}

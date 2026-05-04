@@ -1,4 +1,5 @@
-import { getGameQuality } from '../utils/tiltDetection';
+import { useState } from 'react';
+import { getGameQuality, tiltCheckAnswerIsElevated, tiltCheckAnswerLabel } from '../utils/tiltDetection';
 
 const STATUS_CONFIG = {
   clear:   { icon: '✅', label: 'CLEAR',         color: 'var(--green)',  recClass: 'clear' },
@@ -13,6 +14,9 @@ const TILT_TYPE_COLOR = {
 };
 
 export default function ResultScreen({ lastResult, continueSession, requestEndSession }) {
+  const [resetOffset, setResetOffset] = useState(0);
+  const [resetExpanded, setResetExpanded] = useState(false);
+
   if (!lastResult) return null;
 
   const cfg   = STATUS_CONFIG[lastResult.status];
@@ -70,14 +74,40 @@ export default function ResultScreen({ lastResult, continueSession, requestEndSe
         {/* Left col (or full width if no tilt type) */}
         <div>
           {/* Mental reset first for warning/tilt */}
-          {mentalResetLines.length > 0 && (
-            <div className={`card mental-reset-card mental-reset-${cfg.recClass}`} style={{ marginBottom: '10px' }}>
-              <div className="card-title">Mental Reset - read out loud</div>
-              {mentalResetLines.map((stmt, i) => (
-                <div key={i} className="mental-reset-line">"{stmt}"</div>
-              ))}
-            </div>
-          )}
+          {mentalResetLines.length > 0 && (() => {
+            const SHOW = 2;
+            const total = mentalResetLines.length;
+            const visibleLines = resetExpanded
+              ? mentalResetLines
+              : [
+                  mentalResetLines[resetOffset % total],
+                  mentalResetLines[(resetOffset + 1) % total],
+                ].filter(Boolean);
+            return (
+              <div className={`card mental-reset-card mental-reset-${cfg.recClass}`} style={{ marginBottom: '10px' }}>
+                <div className="card-title" style={{ marginBottom: '10px' }}>Mental Reset - read out loud</div>
+                {visibleLines.map((stmt, i) => (
+                  <div key={i} className="mental-reset-line">"{stmt}"</div>
+                ))}
+                <div className="quip-actions" style={{ marginTop: '8px' }}>
+                  {!resetExpanded && (
+                    <button
+                      className="btn btn-ghost btn-inline"
+                      onClick={() => setResetOffset((o) => (o + SHOW) % total)}
+                    >
+                      Refresh
+                    </button>
+                  )}
+                  <button
+                    className="btn btn-ghost btn-inline"
+                    onClick={() => setResetExpanded((v) => !v)}
+                  >
+                    {resetExpanded ? 'Show less' : `See all ${total}`}
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Recommendation */}
           <div className={`recommendation ${cfg.recClass}`}>
@@ -88,11 +118,14 @@ export default function ResultScreen({ lastResult, continueSession, requestEndSe
           <div className="card" style={{ marginBottom: '10px' }}>
             <div className="card-title">Your Answers</div>
             {[
-              { label: 'Rushed decisions', value: `${answers.rushingDecisions} / 10`, bad: answers.rushingDecisions >= 6 },
-              { label: 'Standards drift', value: `${answers.playingLooser} / 10`, bad: answers.playingLooser >= 6 },
-              { label: 'Frustration level', value: `${answers.frustrationLevel} / 10`, bad: answers.frustrationLevel >= 6 },
+              { label: 'Rushed decisions', value: tiltCheckAnswerLabel(answers.rushingDecisions), bad: tiltCheckAnswerIsElevated(answers.rushingDecisions) },
+              { label: 'Standards drift', value: tiltCheckAnswerLabel(answers.playingLooser), bad: tiltCheckAnswerIsElevated(answers.playingLooser) },
+              { label: 'Frustration level', value: tiltCheckAnswerLabel(answers.frustrationLevel), bad: tiltCheckAnswerIsElevated(answers.frustrationLevel) },
               ...(answers.chasingLosses !== null && answers.chasingLosses !== undefined
-                ? [{ label: 'Urgency to win / get unstuck', value: `${answers.chasingLosses} / 10`, bad: answers.chasingLosses >= 6 }]
+                ? [{ label: 'Urgency to win / get unstuck', value: tiltCheckAnswerLabel(answers.chasingLosses), bad: tiltCheckAnswerIsElevated(answers.chasingLosses) }]
+                : []),
+              ...(answers.selfCriticism !== null && answers.selfCriticism !== undefined
+                ? [{ label: 'Replaying a decision', value: tiltCheckAnswerLabel(answers.selfCriticism), bad: tiltCheckAnswerIsElevated(answers.selfCriticism) }]
                 : []),
             ].map((a, i) => (
               <div key={i} className="trigger-item">

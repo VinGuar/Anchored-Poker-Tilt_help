@@ -2,12 +2,24 @@ import { useEffect, useState } from 'react';
 import { deleteMyAccount, updateAuthEmail, updateAuthPassword } from '../services/authService';
 import { APP_META } from '../config/appMeta';
 
-export default function ProfileScreen({ user, theme = 'dark', updateTheme, onSignOut, hasPremium, openPaywall }) {
+export default function ProfileScreen({
+  user,
+  theme = 'dark',
+  updateTheme,
+  onSignOut,
+  hasPremium,
+  openPaywall,
+  manageSubscriptionUrl,
+  refreshSubscriptionStatus,
+  billingBusy = false,
+}) {
   const [email, setEmail] = useState(user?.email || '');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
   useEffect(() => {
     setEmail(user?.email || '');
@@ -44,10 +56,14 @@ export default function ProfileScreen({ user, theme = 'dark', updateTheme, onSig
     }
   };
 
-  const handleDeleteAccount = async () => {
-    const confirmation = window.prompt('Type DELETE to permanently remove your account and all saved data.');
-    if (confirmation !== 'DELETE') return;
+  const handleDeleteAccount = () => {
+    setDeleteConfirmText('');
+    setShowDeleteModal(true);
+  };
 
+  const confirmDeleteAccount = async () => {
+    if (deleteConfirmText !== 'DELETE') return;
+    setShowDeleteModal(false);
     setBusy(true);
     setError('');
     setInfo('');
@@ -122,6 +138,19 @@ export default function ProfileScreen({ user, theme = 'dark', updateTheme, onSig
             Upgrade to Premium
           </button>
         )}
+        <button className="btn btn-secondary" style={{ marginTop: '8px' }} onClick={() => refreshSubscriptionStatus?.()} disabled={billingBusy}>
+          {billingBusy ? 'Checking...' : 'Refresh Subscription Status'}
+        </button>
+        {hasPremium && (
+          <>
+            <div className="legal-copy" style={{ marginTop: '8px', marginBottom: '8px' }}>
+              Manage or cancel your subscription in your app store account settings.
+            </div>
+            <a className="btn btn-secondary" href={manageSubscriptionUrl} target="_blank" rel="noreferrer">
+              Manage Subscription
+            </a>
+          </>
+        )}
       </div>
 
       <div className="card">
@@ -160,6 +189,48 @@ export default function ProfileScreen({ user, theme = 'dark', updateTheme, onSig
       <div className="actions-stack">
         <button className="btn btn-ghost" onClick={onSignOut}>Sign Out</button>
       </div>
+
+      {showDeleteModal && (
+        <div className="insight-detail-overlay" onClick={() => setShowDeleteModal(false)}>
+          <div
+            className="card"
+            style={{ maxWidth: 360, width: '100%', margin: 0 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="card-title" style={{ color: 'var(--red)' }}>Delete Account</div>
+            <div className="note-text" style={{ marginBottom: 14 }}>
+              This permanently deletes your account and all session data. Type <strong>DELETE</strong> to confirm.
+            </div>
+            <input
+              className="auth-input"
+              type="text"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder="Type DELETE"
+              autoFocus
+              autoCapitalize="characters"
+              style={{ marginBottom: 12 }}
+            />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                className="btn btn-ghost"
+                style={{ flex: 1 }}
+                onClick={() => setShowDeleteModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-danger"
+                style={{ flex: 1 }}
+                onClick={confirmDeleteAccount}
+                disabled={deleteConfirmText !== 'DELETE'}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

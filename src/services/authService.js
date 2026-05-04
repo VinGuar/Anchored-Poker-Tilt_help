@@ -1,21 +1,23 @@
 import { supabase } from '../lib/supabase';
 
-export async function signUpWithEmail(email, password) {
+export async function signUpWithEmail(email, password, captchaToken) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      emailRedirectTo: window.location.origin,
+      emailRedirectTo: 'com.vinguar.anchored://',
+      captchaToken,
     },
   });
   if (error) throw error;
   return data;
 }
 
-export async function signInWithEmail(email, password) {
+export async function signInWithEmail(email, password, captchaToken) {
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
+    options: { captchaToken },
   });
   if (error) throw error;
   return data;
@@ -33,8 +35,7 @@ export async function signInWithGoogle() {
 }
 
 export async function signOut() {
-  const { error } = await supabase.auth.signOut();
-  if (error) throw error;
+  await supabase.auth.signOut();
 }
 
 export async function updateAuthEmail(email) {

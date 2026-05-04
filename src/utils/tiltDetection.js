@@ -57,7 +57,7 @@ const TILT_PROFILES = {
     longTermTip: "Hard-code a stop-loss: 3 buy-ins max per session. Treat it as a rule with no exceptions. The sessions where you override it are the ones that wreck bankrolls.",
   },
   running_bad: {
-    name: 'Running-Bad Tilt',
+    name: 'Hate-Losing Tilt',
     tagline: 'Weeks of losses rewiring your instincts',
     description:
       "This isn't about today, it's the accumulated weight of an extended bad run. Long downswings can shift your intuition toward 'anything I do ends badly,' which becomes a self-fulfilling leak.",
@@ -85,7 +85,7 @@ const TILT_PROFILES = {
     longTermTip: "Set a 'winning session protocol': when you're up X buy-ins, play your tightest, most disciplined game. The goal is to lock in profits, not gamble with them.",
   },
   boredom: {
-    name: 'Boredom Tilt',
+    name: 'Impatience Tilt',
     tagline: 'Card-dead and creating action',
     description:
       "Being card-dead for a long stretch feels like wasted time. The urge to play any two cards 'just to see something happen' bleeds money quietly, small pot after small pot.",
@@ -96,9 +96,44 @@ const TILT_PROFILES = {
       "Patience is a weapon. Folding is part of edge.",
       "Playing more hands out of boredom turns me into the fish.",
     ],
-    longTermTip: "Track hands played per hour in boring sessions. If it spikes, that's boredom tilt. Some players use this as a signal to take a 5-minute break and reset their attention.",
+    longTermTip: "Track hands played per hour in boring sessions. If it spikes, that's impatience tilt. Some players use this as a signal to take a 5-minute break and reset their attention.",
+  },
+  mistake: {
+    name: 'Mistake Tilt',
+    tagline: 'Replaying your own errors',
+    description:
+      "You made a bad play — a poor call, a poorly-timed bluff, a sizing mistake — and now it's living in your head. Self-directed frustration after your own errors is one of the most common ways one bad hand becomes three.",
+    mentalReset: [
+      "Name one thing I'd do differently, lock it in as a lesson, and then actually let it go.",
+      "One mistake doesn't define my session. What I do next does.",
+      "The best players make mistakes. The difference is how long they hold onto them.",
+      "Self-criticism is only useful for about 10 seconds. After that, it's just distraction.",
+      "That hand is over. The next hand doesn't know it happened.",
+    ],
+    longTermTip: "After sessions where you made a clear mistake, write down one concrete adjustment. The act of writing it down signals to your brain that the problem is solved — and makes it easier to move on.",
   },
 };
+
+// ─── Tilt check answer scale (1–5 stored; 6–10 treated as legacy 1–10) ─────────
+/** Map a stored tilt-check answer onto the internal 1–10 scale used by scoring. */
+export function tiltCheckAnswerToTen(raw) {
+  const v = Number(raw);
+  if (!Number.isFinite(v)) return 1;
+  if (v > 5) return Math.min(10, Math.max(1, Math.round(v)));
+  return 1 + ((v - 1) * 9) / 4;
+}
+
+export function tiltCheckAnswerLabel(raw) {
+  const v = Number(raw);
+  if (!Number.isFinite(v)) return '?';
+  if (v > 5) return `${Math.round(v)}/10`;
+  return `${Math.round(v)}/5`;
+}
+
+/** True when the answer maps to the “elevated / high concern” band on the internal 1–10 model. */
+export function tiltCheckAnswerIsElevated(raw) {
+  return tiltCheckAnswerToTen(raw) >= 6;
+}
 
 // ─── Cross-session accumulated tilt ───────────────────────────────────────────
 export function calculateAccumulatedTilt(sessions) {
@@ -111,7 +146,7 @@ export function calculateAccumulatedTilt(sessions) {
     const hasTilt    = s.checks.some(c => c.result.status === 'tilt');
     const hasWarning = !hasTilt && s.checks.some(c => c.result.status === 'warning');
     const avgFr      = s.checks.length > 0
-      ? s.checks.reduce((sum, c) => sum + (c.answers?.frustrationLevel || 0), 0) / s.checks.length
+      ? s.checks.reduce((sum, c) => sum + tiltCheckAnswerToTen(c.answers?.frustrationLevel ?? 0), 0) / s.checks.length
       : 0;
     if (hasTilt)              score += 30 * weight;
     if (hasWarning)           score += 12 * weight;
@@ -133,8 +168,13 @@ export function calculateAccumulatedTilt(sessions) {
 }
 
 // ─── Tilt type classification ──────────────────────────────────────────────────
-function classifyTiltType({ rushingDecisions, playingLooser, frustrationLevel, chasingLosses, session, accumulatedTilt, tiltProfile }) {
+function classifyTiltType({ rushingDecisions, playingLooser, frustrationLevel, chasingLosses, selfCriticism, session, accumulatedTilt, tiltProfile }) {
   if (!session) return null;
+
+  const rushTen = tiltCheckAnswerToTen(rushingDecisions);
+  const looseTen = tiltCheckAnswerToTen(playingLooser);
+  const frTen = tiltCheckAnswerToTen(frustrationLevel);
+  const chaseTen = tiltCheckAnswerToTen(chasingLosses);
 
   const now              = Date.now();
   const sessionDurationMin = (now - session.startTime) / 60000;
@@ -150,20 +190,21 @@ function classifyTiltType({ rushingDecisions, playingLooser, frustrationLevel, c
 
   const s = {
     injustice:   0,
-    revenge:     0,
-    entitlement: 0,
-    desperation: 0,
     running_bad: 0,
-    winners:     0,
+    mistake:     0,
+    entitlement: 0,
+    revenge:     0,
+    desperation: 0,
     boredom:     0,
+    winners:     0,
   };
 
-  const rushingHigh = rushingDecisions >= 6;
-  const rushingLow = rushingDecisions <= 3;
-  const looserHigh = playingLooser >= 6;
-  const frustrationHigh = frustrationLevel >= 7;
-  const frustrationMid = frustrationLevel >= 5;
-  const chaseHigh = chasingLosses >= 6;
+  const rushingHigh = rushTen >= 6;
+  const rushingLow = rushTen <= 3;
+  const looserHigh = looseTen >= 6;
+  const frustrationHigh = frTen >= 7;
+  const frustrationMid = frTen >= 5;
+  const chaseHigh = chaseTen >= 6;
 
   // 1. INJUSTICE - bad beats driving frustration at variance
   s.injustice = (badBeats >= 2 ? 8 : badBeats >= 1 ? 5 : 0)
@@ -171,7 +212,7 @@ function classifyTiltType({ rushingDecisions, playingLooser, frustrationLevel, c
 
   // 2. REVENGE - proxy: bluffs failed + rushing + targeted frustration
   s.revenge = (bluffs >= 2 ? 7 : bluffs >= 1 ? 3 : 0)
-            + (rushingHigh && frustrationLevel >= 6 ? 4 : 0)
+            + (rushingHigh && frTen >= 6 ? 4 : 0)
             + (rushingHigh && badBeats >= 1 ? 2 : 0);
 
   // 3. ENTITLEMENT - big losses without clear bad-luck events (losing to fish)
@@ -193,9 +234,20 @@ function classifyTiltType({ rushingDecisions, playingLooser, frustrationLevel, c
     ? (session.netBuyIns >= 2 ? 6 : 3) + (looserHigh ? 6 : 0) + (wonBig >= 1 ? 2 : 0)
     : 0;
 
-  // 7. BOREDOM - long session + low event density + action-seeking
-  if (sessionDurationMin >= 60 && evPerHour < 2.5 && looserHigh) {
+  // 7. BOREDOM/IMPATIENCE - long session + low event density + action-seeking
+  // Guard: if bluffs or multiple bad beats are present there's an active trigger, not passive boredom
+  if (sessionDurationMin >= 60 && evPerHour < 2.5 && looserHigh && bluffs === 0 && badBeats < 2) {
     s.boredom = (sessionDurationMin >= 90 ? 8 : 5) + (evPerHour < 1.5 ? 3 : 0);
+  }
+
+  // 8. MISTAKE - self-critical after own errors
+  const scTen = tiltCheckAnswerToTen(selfCriticism);
+  if (scTen >= 6) {
+    s.mistake = (scTen >= 8 ? 9 : 6);
+    if (bluffs >= 1) s.mistake += 4; // failed bluff is the classic mistake tilt trigger
+    if (badBeats === 0 && bigLosses === 0) s.mistake += 2; // no external variance = self-directed
+  } else if (scTen >= 4) {
+    s.mistake = 2;
   }
 
   const [topType, topScore] = Object.entries(s).sort((a, b) => b[1] - a[1])[0];
@@ -220,45 +272,64 @@ export function runTiltCheck({
   playingLooser,
   frustrationLevel,
   chasingLosses,
+  selfCriticism,
   session,
   accumulatedTilt,
   tiltProfile,
 }) {
   const triggers = [];
-  const rush = Number(rushingDecisions ?? 1);
-  const loose = Number(playingLooser ?? 1);
-  const fr = Number(frustrationLevel ?? 1);
-  const chase = Number(chasingLosses ?? 1);
+  const rawRush = rushingDecisions;
+  const rawLoose = playingLooser;
+  const rawFr = frustrationLevel;
+  const rawChase = chasingLosses;
+  const rawSc = selfCriticism;
+
+  const rush = tiltCheckAnswerToTen(rushingDecisions ?? 1);
+  const loose = tiltCheckAnswerToTen(playingLooser ?? 1);
+  const fr = tiltCheckAnswerToTen(frustrationLevel ?? 1);
+  const chase = tiltCheckAnswerToTen(chasingLosses ?? 1);
+  const sc = tiltCheckAnswerToTen(selfCriticism ?? 1);
   const questionWeights = tiltProfile?.questionWeights || {};
   const rushW = Math.max(0.75, Math.min(1.55, Number(questionWeights.rushingDecisions || 1)));
   const looseW = Math.max(0.75, Math.min(1.55, Number(questionWeights.playingLooser || 1)));
   const frW = Math.max(0.75, Math.min(1.55, Number(questionWeights.frustrationLevel || 1)));
   const chaseW = Math.max(0.75, Math.min(1.55, Number(questionWeights.chasingLosses || 1)));
+  const scW = Math.max(0.75, Math.min(1.55, Number(questionWeights.selfCriticism || 1)));
 
   // ── BEHAVIORAL SCORE (primary signal, can be negative) ───────────────────
   // Self-reported answers are the strongest signal. "No" answers are active evidence
   // of control, not just neutral. They reduce the weight of everything else.
   let behavioralScore = 0;
 
-  if (rush >= 8)            { behavioralScore += Math.round(30 * rushW); triggers.push(`Rushed pace (${rush}/10)`); }
-  else if (rush >= 6)       { behavioralScore += Math.round(18 * rushW); triggers.push(`Elevated decision speed (${rush}/10)`); }
+  if (rush >= 8)            { behavioralScore += Math.round(30 * rushW); triggers.push(`Rushed pace (${tiltCheckAnswerLabel(rawRush)})`); }
+  else if (rush >= 6)       { behavioralScore += Math.round(18 * rushW); triggers.push(`Elevated decision speed (${tiltCheckAnswerLabel(rawRush)})`); }
   else if (rush >= 4)       { behavioralScore += Math.round(7 * rushW); }
   else if (rush <= 2)       { behavioralScore -= Math.round(10 * rushW); }
 
-  if (loose >= 8)           { behavioralScore += Math.round(30 * looseW); triggers.push(`Standards drifting significantly (${loose}/10)`); }
-  else if (loose >= 6)      { behavioralScore += Math.round(18 * looseW); triggers.push(`Standards drifting (${loose}/10)`); }
+  if (loose >= 8)           { behavioralScore += Math.round(30 * looseW); triggers.push(`Standards drifting significantly (${tiltCheckAnswerLabel(rawLoose)})`); }
+  else if (loose >= 6)      { behavioralScore += Math.round(18 * looseW); triggers.push(`Standards drifting (${tiltCheckAnswerLabel(rawLoose)})`); }
   else if (loose >= 4)      { behavioralScore += Math.round(7 * looseW); }
   else if (loose <= 2)      { behavioralScore -= Math.round(10 * looseW); }
 
-  if (fr >= 8)          { behavioralScore += Math.round(45 * frW); triggers.push(`High emotional activation (${fr}/10)`); }
-  else if (fr >= 6)     { behavioralScore += Math.round(25 * frW); triggers.push(`Elevated frustration (${fr}/10)`); }
+  if (fr >= 8)          { behavioralScore += Math.round(45 * frW); triggers.push(`High emotional activation (${tiltCheckAnswerLabel(rawFr)})`); }
+  else if (fr >= 6)     { behavioralScore += Math.round(25 * frW); triggers.push(`Elevated frustration (${tiltCheckAnswerLabel(rawFr)})`); }
   else if (fr >= 4)     { behavioralScore += Math.round(8 * frW); }
   else if (fr <= 2)     { behavioralScore -= Math.round(12 * frW); }
 
-  if (chase >= 8)        { behavioralScore += Math.round(26 * chaseW); triggers.push(`Strong urgency to win/get unstuck (${chase}/10)`); }
-  else if (chase >= 6)   { behavioralScore += Math.round(15 * chaseW); triggers.push(`Recovery urgency present (${chase}/10)`); }
+  if (chase >= 8)        { behavioralScore += Math.round(26 * chaseW); triggers.push(`Strong urgency to win/get unstuck (${tiltCheckAnswerLabel(rawChase)})`); }
+  else if (chase >= 6)   { behavioralScore += Math.round(15 * chaseW); triggers.push(`Recovery urgency present (${tiltCheckAnswerLabel(rawChase)})`); }
   else if (chase >= 4)   { behavioralScore += Math.round(5 * chaseW); }
   else if (chase <= 2)   { behavioralScore -= Math.round(8 * chaseW); }
+
+  if (sc >= 8)           { behavioralScore += Math.round(28 * scW); triggers.push(`High self-criticism / replaying (${tiltCheckAnswerLabel(rawSc)})`); }
+  else if (sc >= 6)      { behavioralScore += Math.round(14 * scW); triggers.push(`Dwelling on a decision (${tiltCheckAnswerLabel(rawSc)})`); }
+  else if (sc >= 4)      { behavioralScore += Math.round(4 * scW); }
+  else if (sc <= 2)      { behavioralScore -= Math.round(6 * scW); }
+
+  // Cap negative behavioral at -35 so a single strong signal can't be fully buried
+  // by four calm answers. The gating still works — calm answers matter — but a
+  // genuine 8+ on any dimension stays visible.
+  behavioralScore = Math.max(behavioralScore, -35);
 
   // ── PASSIVE SCORE (context / risk factors) ────────────────────────────────
   // These are real warning signs but cannot override a clean self-report.
@@ -306,6 +377,21 @@ export function runTiltCheck({
     const negTypes = [bb > 0, bl > 0, blf > 0].filter(Boolean).length;
     if (negTypes >= 2)         { passiveScore += 4; triggers.push('Multiple types of negative events'); }
     if (bb + bl + blf >= 4)    { passiveScore += 3; }
+
+    // Winner's context: playing very loose while meaningfully ahead
+    if (session.netBuyIns >= 2 && loose >= 8) {
+      passiveScore += 10;
+      triggers.push('Playing very loose while significantly ahead');
+    }
+
+    // Impatience context: long card-dead session with standards drifting
+    const sessionMins = (Date.now() - session.startTime) / 60000;
+    const totalEvs = session.events.length;
+    const evPerHr = sessionMins > 0 ? (totalEvs / sessionMins) * 60 : Infinity;
+    if (sessionMins >= 60 && evPerHr < 2 && loose >= 6) {
+      passiveScore += 8;
+      triggers.push('Card-dead session with standards drifting');
+    }
   }
 
   if (accumulatedTilt?.level === 'high')      { passiveScore += 7; triggers.push('High accumulated tilt from recent sessions'); }
@@ -324,15 +410,14 @@ export function runTiltCheck({
 
   let score = Math.max(0, behavioralScore) + Math.round(passiveScore * passiveMultiplier);
 
-  // Extreme frustration floor: if frustration is 8+ even with behavioral control,
-  // always surface at least a warning, you may be managing it but it's there.
+  // Extreme frustration floor
   if (fr >= 8 && score < 35) score = 35;
 
   score = Math.min(score, 100);
 
   // ── TILT TYPE + RECOMMENDATION ────────────────────────────────────────────
   const tiltType = score >= 35
-    ? classifyTiltType({ rushingDecisions: rush, playingLooser: loose, frustrationLevel: fr, chasingLosses: chase, session, accumulatedTilt, tiltProfile })
+    ? classifyTiltType({ rushingDecisions: rush, playingLooser: loose, frustrationLevel: fr, chasingLosses: chase, selfCriticism: sc, session, accumulatedTilt, tiltProfile })
     : null;
 
   const passiveContribution = Math.round(passiveScore * passiveMultiplier);
@@ -376,10 +461,21 @@ export function runTiltCheck({
       : "You're stable right now. Stay focused, trust your process, and keep making solid decisions.";
   }
 
+  const packRaw = (v) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+
   return {
     score, status, triggers, recommendation,
     timestamp: Date.now(),
-    answers: { rushingDecisions: rush, playingLooser: loose, frustrationLevel: fr, chasingLosses: chase },
+    answers: {
+      rushingDecisions: packRaw(rawRush),
+      playingLooser: packRaw(rawLoose),
+      frustrationLevel: packRaw(rawFr),
+      chasingLosses: packRaw(rawChase),
+      selfCriticism: packRaw(rawSc),
+    },
     profileWeighting: {
       questions: { rushingDecisions: rushW, playingLooser: looseW, frustrationLevel: frW, chasingLosses: chaseW },
       events: tiltProfile?.triggerWeights || null,
@@ -505,6 +601,19 @@ export function analyzePatterns(sessions) {
       description: "You loosen standards when you're winning",
       insight: "When up 2+ buy-ins: mentally shift to 'protect mode', tighter ranges, no marginal calls.",
       frequency: winnersTilt.length,
+    });
+  }
+
+  // Mistake tilt pattern
+  const mistakeTilt = sessions.filter(
+    s => s.checks.some(c => c.result.tiltType?.type === 'mistake')
+  );
+  if (mistakeTilt.length >= 2) {
+    patterns.push({
+      type: 'mistake',
+      description: "Your own errors are a recurring tilt trigger",
+      insight: "After any mistake: name one fix, then give yourself 10 seconds max to process it before the next hand.",
+      frequency: mistakeTilt.length,
     });
   }
 

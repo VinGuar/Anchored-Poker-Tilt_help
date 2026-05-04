@@ -2,6 +2,89 @@
 
 Anchored is a real-time poker tilt check and coaching app that helps players stay process-focused, emotionally stable, and decision-disciplined during sessions.
 
+## App Store Connect listing (copy/paste)
+
+**Description**
+
+I made Anchored because tilt costs real money, and most of us don’t notice it until it’s too late.
+
+It’s simple: you’re in a session, you run a quick check, and the app tells you where your head is at (Clear, Warning, or Tilt) based on a few honest sliders (pace, standards, emotion, that “I need this pot” feeling). Then you get short coaching you can actually use before the next hand.
+
+You can log sessions and notes so over time you see your patterns, not just tonight’s damage.
+
+If you play seriously and want something direct instead of another motivational poster, this is for you.
+
+**Keywords**
+
+poker,tilt,mental game,bankroll,focus
+
+**Support URL**
+
+`mailto:bostoncelticsvincent@gmail.com` (interim). App Store Connect usually wants an `https://` page; when you have one, replace this with your hosted privacy/support page or a public profile link.
+
+**Copyright**
+
+© 2026 Vincent Guarnieri
+
+## Current Status / TODO
+
+### Done (Windows-ready)
+
+- RevenueCat Capacitor SDK integrated in app code (`@revenuecat/purchases-capacitor`).
+- Premium gating now checks RevenueCat entitlement `anchored_pro` on native platforms.
+- Paywall purchase + restore wired to RevenueCat in app flow.
+- Profile screen includes `Manage Subscription` link (Apple subscriptions page on iOS).
+- RevenueCat env keys documented in `.env.example` and setup flow documented below.
+
+### Pending (after Apple Developer approval)
+
+- In App Store Connect, create subscription products:
+  - `monthly` (auto-renewable subscription)
+  - `yearly` (auto-renewable subscription)
+- In RevenueCat, map these products into offering `default`.
+- Attach both products to entitlement `anchored_pro`.
+- On Mac/Xcode: run `npm run cap:sync:ios`, verify purchase/restore in sandbox, archive/upload.
+
+## Launch Board (Project-Specific)
+
+Use this as the single pre-launch tracker.
+
+### P0 - Must finish before launch
+
+- [x] RevenueCat SDK integrated in app code.
+- [x] Premium features gated in app flow with paywall path.
+- [x] Restore purchases action wired in paywall.
+- [x] Manage subscription link available in Profile plan section.
+- [x] Privacy policy + terms links available in app.
+- [x] In-app account deletion flow exists in Profile.
+- [ ] App Store Connect subscription products created:
+  - `monthly` (auto-renewable)
+  - `yearly` (auto-renewable)
+- [ ] RevenueCat products mapped to offering `default`.
+- [ ] RevenueCat entitlement `anchored_pro` linked to both subscription products.
+- [ ] iOS sandbox purchase test completed (buy, restore, cancel, relogin).
+- [ ] TestFlight build uploaded and tested on physical iPhone.
+- [ ] App Store Connect privacy labels completed and consistent with Supabase usage.
+
+### P1 - Strongly recommended for week 1
+
+- [ ] Add crash/error monitoring (for example Sentry) for production triage.
+- [ ] Add analytics events for activation + paywall funnel:
+  - paywall viewed
+  - purchase started
+  - purchase success/failure
+  - restore success/failure
+- [ ] Validate Supabase RLS manually with two test users (no cross-account access).
+- [ ] Add explicit retry/error states on all key network actions.
+- [ ] Run full QA pass for offline + flaky network behavior.
+
+### P2 - Post-launch optimization
+
+- [ ] Add performance pass for slower iPhones (startup and form input responsiveness).
+- [ ] Refine paywall package selection and experimentation strategy.
+- [ ] Add retention dashboard (D1/D7 usage, subscription conversion, restore rate).
+- [ ] Create simple weekly release checklist and changelog cadence.
+
 ## What it does
 
 - Runs a fast in-session tilt check using four 1-10 signals:
@@ -129,6 +212,53 @@ npm run cap:open:ios
 5. Archive and upload via Xcode Organizer
 
 Note: iOS signing, CocoaPods, and App Store upload must be done on macOS with Xcode installed.
+
+## RevenueCat subscription setup
+
+This app now uses RevenueCat for premium entitlement checks, purchases, and restore flows on native mobile builds.
+
+### 1) Install dependency
+
+```bash
+npm install
+```
+
+### 2) Add environment keys
+
+Set these in `.env`:
+
+- `VITE_REVENUECAT_APPLE_API_KEY`
+- `VITE_REVENUECAT_GOOGLE_API_KEY` (optional until Android launch)
+
+### 3) RevenueCat dashboard
+
+In RevenueCat:
+
+1. Create entitlement: `anchored_pro` (display name can be `Anchored Pro`)
+2. Create offering: `default`
+3. Add packages in the current offering for store product IDs `monthly` and `yearly` (auto-renewable subscriptions). Prefer package identifiers `monthly` and `yearly`, or rely on matching by App Store product ID (see `revenueCatService.js`).
+4. Attach both subscription products to entitlement `anchored_pro`
+
+The app purchases from the current/default offering and grants access when entitlement `anchored_pro` is active.
+
+### 4) Apple compatibility / cancellation
+
+- Subscriptions purchased via RevenueCat on iOS are still native Apple subscriptions.
+- Users can manage/cancel in Apple subscriptions settings.
+- App `Profile -> Plan -> Manage Subscription` links directly to Apple's subscription management page.
+
+### 5) If Apple Developer approval is still pending
+
+You can complete all non-Apple prep now and finish IAP activation later:
+
+1. Keep RevenueCat entitlement/offering/package identifiers exactly as above.
+2. Keep `VITE_REVENUECAT_APPLE_API_KEY` in `.env`.
+3. Continue web development on Windows as normal.
+4. After Apple account approval, create App Store Connect subscriptions with matching IDs (`monthly`, `yearly`) and link them in RevenueCat.
+5. On Mac, run:
+   - `npm install`
+   - `npm run cap:sync:ios`
+   - open `ios/App/App.xcworkspace` and archive/upload.
 
 ## First App Store submission checklist
 

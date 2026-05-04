@@ -33,6 +33,7 @@ function sanitizeChecks(checks) {
         playingLooser: clampInt(answers.playingLooser, 1, 10, 1),
         frustrationLevel: clampInt(answers.frustrationLevel, 1, 10, 1),
         chasingLosses: clampInt(answers.chasingLosses, 1, 10, 1),
+        selfCriticism: clampInt(answers.selfCriticism, 1, 10, 1),
       },
       result,
     };

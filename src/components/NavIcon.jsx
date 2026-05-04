@@ -30,8 +30,8 @@ export default function NavIcon({ id }) {
   if (id === 'profile') {
     return (
       <svg viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="12" cy="8" r="3.5" />
-        <path d="M5.5 19c1.2-3.1 3.6-4.8 6.5-4.8s5.3 1.7 6.5 4.8" />
+        <circle cx="12" cy="12" r="2.8" />
+        <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
       </svg>
     );
   }

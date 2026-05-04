@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { tiltCheckAnswerLabel, tiltCheckAnswerToTen } from '../utils/tiltDetection';
 
 function sessionTopStatus(session) {
   if (session.checks.some(c => c.result.status === 'tilt')) return 'tilt';
@@ -40,13 +41,29 @@ export default function InsightsScreen({ sessions, patterns, updateSessionNote, 
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [draftNote, setDraftNote] = useState('');
   const [detailSession, setDetailSession] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const allChecks = sessions.flatMap(s => s.checks);
   const sessionsWithChecks = sessions.filter(s => s.checks.length > 0);
   const tiltSessions = sessionsWithChecks.filter(s => s.checks.some(c => c.result.status === 'tilt')).length;
   const tiltRate = sessionsWithChecks.length > 0 ? Math.round((tiltSessions / sessionsWithChecks.length) * 100) : 0;
-  const avgFr = allChecks.length > 0
-    ? (allChecks.reduce((sum, c) => sum + (c.answers?.frustrationLevel || 0), 0) / allChecks.length).toFixed(1)
-    : '—';
+  const frLevels = allChecks.map((c) => c.answers?.frustrationLevel).filter((v) => v != null && v !== '');
+  const avgFr =
+    frLevels.length > 0
+      ? (frLevels.reduce((a, b) => a + Number(b), 0) / frLevels.length).toFixed(1)
+      : '—';
+  const avgFrTen =
+    allChecks.length > 0
+      ? allChecks.reduce((sum, c) => sum + tiltCheckAnswerToTen(c.answers?.frustrationLevel ?? 0), 0) /
+        allChecks.length
+      : null;
+  const avgFrColor =
+    avgFrTen != null
+      ? avgFrTen >= 7
+        ? 'var(--red)'
+        : avgFrTen >= 5
+          ? 'var(--yellow)'
+          : 'var(--green)'
+      : 'var(--text-secondary)';
 
   return (
     <div className="screen">
@@ -72,8 +89,8 @@ export default function InsightsScreen({ sessions, patterns, updateSessionNote, 
           <div className="stat-label">Total Checks</div>
         </div>
         <div className="stat-card">
-          <div className="stat-value">{avgFr}</div>
-          <div className="stat-label">Avg Frustration</div>
+          <div className="stat-value" style={{ color: avgFr !== '—' ? avgFrColor : 'var(--text-secondary)' }}>{avgFr}</div>
+          <div className="stat-label">Avg frustration (1–5)</div>
         </div>
       </div>
 
@@ -215,15 +232,7 @@ export default function InsightsScreen({ sessions, patterns, updateSessionNote, 
                             </button>
                             <button
                               className="btn btn-ghost btn-inline"
-                              onClick={() => {
-                                const confirmation = window.confirm('Delete this session? Click OK to confirm.');
-                                if (!confirmation) return;
-                                if (typeof deleteSession === 'function') {
-                                  deleteSession(s.id);
-                                }
-                                setExpanded(null);
-                                setEditingNoteId(null);
-                              }}
+                              onClick={() => setConfirmDeleteId(s.id)}
                             >
                               Delete Session
                             </button>
@@ -291,10 +300,10 @@ export default function InsightsScreen({ sessions, patterns, updateSessionNote, 
                           </span>
                         </div>
                         <div className="insight-detail-grid">
-                          <div>Rushing: {check.answers?.rushingDecisions ?? '-'}/10</div>
-                          <div>Playing looser: {check.answers?.playingLooser ?? '-'}/10</div>
-                          <div>Frustration: {check.answers?.frustrationLevel ?? '-'}/10</div>
-                          <div>Chasing losses: {check.answers?.chasingLosses ?? '-'}/10</div>
+                          <div>Rushing: {check.answers?.rushingDecisions != null ? tiltCheckAnswerLabel(check.answers.rushingDecisions) : '—'}</div>
+                          <div>Playing looser: {check.answers?.playingLooser != null ? tiltCheckAnswerLabel(check.answers.playingLooser) : '—'}</div>
+                          <div>Frustration: {check.answers?.frustrationLevel != null ? tiltCheckAnswerLabel(check.answers.frustrationLevel) : '—'}</div>
+                          <div>Chasing losses: {check.answers?.chasingLosses != null ? tiltCheckAnswerLabel(check.answers.chasingLosses) : '—'}</div>
                         </div>
                         {check.result?.recommendation && (
                           <div className="insight-detail-subcopy">{check.result.recommendation}</div>
@@ -336,6 +345,42 @@ export default function InsightsScreen({ sessions, patterns, updateSessionNote, 
                   <div className="insight-detail-empty">No end-session note added.</div>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmDeleteId && (
+        <div className="insight-detail-overlay" onClick={() => setConfirmDeleteId(null)}>
+          <div
+            className="card"
+            style={{ maxWidth: 320, width: '100%', margin: 0 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="card-title">Delete Session</div>
+            <div className="note-text" style={{ marginBottom: 14 }}>
+              This session and all its check-ins will be permanently removed.
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                className="btn btn-ghost"
+                style={{ flex: 1 }}
+                onClick={() => setConfirmDeleteId(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-danger"
+                style={{ flex: 1 }}
+                onClick={() => {
+                  if (typeof deleteSession === 'function') deleteSession(confirmDeleteId);
+                  setConfirmDeleteId(null);
+                  setExpanded(null);
+                  setEditingNoteId(null);
+                }}
+              >
+                Delete
+              </button>
             </div>
           </div>
         </div>

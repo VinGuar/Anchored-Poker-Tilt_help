@@ -1,9 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { runTiltCheck, analyzePatterns, calculateAccumulatedTilt } from './utils/tiltDetection';
 import { getCurrentSession, getCurrentUser, onAuthStateChange, signOut } from './services/authService';
 import { createSession, deleteSessionById, fetchMySessions, updateSession } from './services/sessionsService';
 import { getMySettings, upsertMySettings } from './services/settingsService';
 import { getMonetizationState, updateMonetizationState } from './services/monetizationService';
+import {
+  getSubscriptionManagementUrl,
+  hasPremiumEntitlement,
+  initRevenueCat,
+  logoutRevenueCat,
+  purchasePremium,
+  refreshPremiumStatus,
+  restorePremium,
+} from './services/revenueCatService';
 import BottomNav from './components/BottomNav';
 import Sidebar from './components/Sidebar';
 import HomeScreen from './screens/HomeScreen';
@@ -23,6 +32,62 @@ import PaywallScreen from './screens/PaywallScreen';
 import TiltProfileScreen from './screens/TiltProfileScreen';
 import TiltProfileReportScreen from './screens/TiltProfileReportScreen';
 
+const SCREEN_STORAGE_KEY = 'anchored_screen';
+/** If set, user had a current session last visit — used when screen key is missing/'home'. */
+const LIVE_SESSION_HINT_KEY = 'anchored_live_session';
+/** Screens safe to restore on reload (not mid-flow modals). */
+const RESTORABLE_SCREENS = new Set([
+  'home',
+  'session',
+  'presession',
+  'insights',
+  'learn',
+  'profile',
+  'history',
+  'stats',
+  'tiltprofile',
+  'tiltprofile-edit',
+  'tiltprofile-report',
+]);
+const SCREENS_NO_PERSIST = new Set(['auth', 'paywall', 'tiltcheck', 'result', 'endsession']);
+
+function readStoredScreen() {
+  try {
+    const s = sessionStorage.getItem(SCREEN_STORAGE_KEY);
+    if (s && RESTORABLE_SCREENS.has(s)) return s;
+  } catch (_) {}
+  return 'home';
+}
+
+function readStoredScreenWithLiveHint() {
+  let s = readStoredScreen();
+  if (s !== 'home') return s;
+  try {
+    if (sessionStorage.getItem(LIVE_SESSION_HINT_KEY) === '1') return 'session';
+  } catch (_) {}
+  return 'home';
+}
+
+/** When a live DB session exists, stay on these tabs across refresh; otherwise open live session UI. */
+const SCREEN_TAB_KEEP = new Set([
+  'insights',
+  'learn',
+  'profile',
+  'history',
+  'stats',
+  'tiltprofile',
+  'tiltprofile-edit',
+  'tiltprofile-report',
+]);
+
+function computeScreenAfterHydrate(currentActive, storedPreferred) {
+  if (currentActive) {
+    if (SCREEN_TAB_KEEP.has(storedPreferred)) return storedPreferred;
+    return 'session';
+  }
+  return storedPreferred;
+}
+
 export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [user, setUser] = useState(null);
@@ -31,7 +96,10 @@ export default function App() {
   const [lastResult, setLastResult] = useState(null);
   const [sessions, setSessions] = useState([]);
   const [preSessionNote, setPreSessionNote] = useState('');
-  const [theme, setTheme] = useState('dark');
+  const [theme, setTheme] = useState(() => {
+    try { const t = localStorage.getItem('anchored_theme'); if (t === 'light' || t === 'dark') return t; } catch (_) {}
+    return 'dark';
+  });
   const [authPrompt, setAuthPrompt] = useState('');
   const [appNotice, setAppNotice] = useState('');
   const [keyboardOpen, setKeyboardOpen] = useState(false);
@@ -40,34 +108,82 @@ export default function App() {
   const [tiltProfileReport, setTiltProfileReport] = useState(null);
   const [paywallContext, setPaywallContext] = useState('premium');
   const [paywallReturnScreen, setPaywallReturnScreen] = useState('home');
+  const [selectedPackageId, setSelectedPackageId] = useState('monthly');
+  const [billingBusy, setBillingBusy] = useState(false);
+  /** After fetchMySessions settles; avoids redirecting to tilt profile before we know activeSession. */
+  const [sessionsBootstrapped, setSessionsBootstrapped] = useState(false);
+  /** Skip duplicate workspace fetch when this matches `user.id` (already hydrated). */
+  const lastHydratedUserIdRef = useRef(null);
 
   useEffect(() => {
     let mounted = true;
-    (async () => {
-      const session = await getCurrentSession();
-      const currentUser = session?.user ?? (await getCurrentUser());
-      if (!mounted) return;
-      setUser(currentUser || null);
-      setAuthReady(true);
-    })().catch(() => {
-      if (!mounted) return;
-      setUser(null);
-      setAuthReady(true);
-    });
+    let authSubscription = null;
 
-    const sub = onAuthStateChange((session) => {
-      setUser(session?.user ?? null);
-    });
+    const subscribeAuth = () => {
+      if (!mounted) return;
+      // Subscribe only after getSession/getUser — avoids INITIAL_SESSION null clearing user.
+      authSubscription = onAuthStateChange((nextSession) => {
+        setUser(nextSession?.user ?? null);
+      });
+    };
+
+    (async () => {
+      try {
+        const session = await getCurrentSession();
+        const currentUser = session?.user ?? (await getCurrentUser());
+        if (!mounted) return;
+        setUser(currentUser || null);
+        if (!currentUser?.id) {
+          try {
+            sessionStorage.removeItem(SCREEN_STORAGE_KEY);
+            sessionStorage.removeItem(LIVE_SESSION_HINT_KEY);
+          } catch (_) {}
+          setScreen('home');
+        }
+        // Logged-in: screen + sessions come from workspace hydrate (never paint shell until ready).
+        setAuthReady(true);
+        subscribeAuth();
+      } catch {
+        if (!mounted) return;
+        setUser(null);
+        try {
+          sessionStorage.removeItem(SCREEN_STORAGE_KEY);
+          sessionStorage.removeItem(LIVE_SESSION_HINT_KEY);
+        } catch (_) {}
+        setScreen('home');
+        setAuthReady(true);
+        subscribeAuth();
+      }
+    })();
 
     return () => {
       mounted = false;
-      sub?.unsubscribe?.();
+      authSubscription?.unsubscribe?.();
     };
   }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
+    try { localStorage.setItem('anchored_theme', theme); } catch (_) {}
   }, [theme]);
+
+  useEffect(() => {
+    if (!authReady) return;
+    if (SCREENS_NO_PERSIST.has(screen)) return;
+    if (!user?.id) return;
+    if (!sessionsBootstrapped) return;
+    try {
+      sessionStorage.setItem(SCREEN_STORAGE_KEY, screen);
+    } catch (_) {}
+  }, [authReady, screen, user?.id, sessionsBootstrapped]);
+
+  useEffect(() => {
+    if (!user?.id || !sessionsBootstrapped) return;
+    try {
+      if (activeSession) sessionStorage.setItem(LIVE_SESSION_HINT_KEY, '1');
+      else sessionStorage.removeItem(LIVE_SESSION_HINT_KEY);
+    } catch (_) {}
+  }, [user?.id, activeSession, sessionsBootstrapped]);
 
   useEffect(() => {
     const isMobileViewport = () => window.matchMedia('(max-width: 1023px)').matches;
@@ -155,7 +271,11 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (!authReady) return;
+
     if (!user?.id) {
+      lastHydratedUserIdRef.current = null;
+      logoutRevenueCat().catch(() => {});
       setSessions([]);
       setPreSessionNote('');
       setTheme('dark');
@@ -164,47 +284,86 @@ export default function App() {
       setHasPremium(false);
       setTiltProfileInput(null);
       setTiltProfileReport(null);
-      if (screen === 'profile') setScreen('home');
+      setSessionsBootstrapped(false);
+      try {
+        sessionStorage.removeItem(SCREEN_STORAGE_KEY);
+        sessionStorage.removeItem(LIVE_SESSION_HINT_KEY);
+      } catch (_) {}
+      setScreen('home');
       return;
     }
-    fetchMySessions()
-      .then((fetched) => {
-        setSessions(fetched);
+
+    if (lastHydratedUserIdRef.current === user.id) return;
+
+    let cancelled = false;
+    setSessionsBootstrapped(false);
+
+    (async () => {
+      try {
+        const [fetched, settings] = await Promise.all([
+          fetchMySessions(),
+          getMySettings().catch(() => null),
+        ]);
+        if (cancelled) return;
+
         const current = fetched.find((s) => s.status === 'current' || !s.endTime) || null;
+        const monetization = getMonetizationState(user.id);
+        const storedPreferred = readStoredScreenWithLiveHint();
+        let nextScreen = computeScreenAfterHydrate(current, storedPreferred);
+        if (nextScreen === 'auth') nextScreen = 'home';
+
+        setSessions(fetched);
         setActiveSession(current);
-        if (current) {
-          setScreen('session');
+        setTiltProfileInput(monetization.tiltProfileInput || null);
+        setTiltProfileReport(monetization.tiltProfileReport || null);
+        setLastResult(null);
+        setScreen(nextScreen);
+        setSessionsBootstrapped(true);
+        lastHydratedUserIdRef.current = user.id;
+
+        if (settings) {
+          setPreSessionNote(settings.pre_session_note || '');
+          setTheme(settings.theme === 'light' ? 'light' : 'dark');
         }
-      })
-      .catch(() => {
+
+        initRevenueCat(user.id)
+          .then((enabled) => {
+            if (!enabled) {
+              setHasPremium(Boolean(monetization.premium));
+              return;
+            }
+            return hasPremiumEntitlement().then((premium) => {
+              setHasPremium(premium);
+              updateMonetizationState(user.id, { premium });
+            });
+          })
+          .catch(() => {
+            setHasPremium(Boolean(monetization.premium));
+          });
+      } catch {
+        if (cancelled) return;
         setSessions([]);
         setActiveSession(null);
-      });
-    getMySettings()
-      .then((settings) => {
-        setPreSessionNote(settings?.pre_session_note || '');
-        setTheme(settings?.theme === 'light' ? 'light' : 'dark');
-      })
-      .catch(() => {
-        setPreSessionNote('');
-        setTheme('dark');
-      });
-    const monetization = getMonetizationState(user.id);
-    setHasPremium(Boolean(monetization.premium));
-    setTiltProfileInput(monetization.tiltProfileInput || null);
-    setTiltProfileReport(monetization.tiltProfileReport || null);
-    setLastResult(null);
-    if (screen === 'auth') setScreen('home');
-  }, [user?.id]);
+        setSessionsBootstrapped(true);
+        lastHydratedUserIdRef.current = user.id;
+        setScreen('home');
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authReady, user?.id]);
 
   useEffect(() => {
     if (!user?.id) return;
+    if (!sessionsBootstrapped) return;
     if (tiltProfileInput) return;
     if (activeSession) return;
     if (screen === 'home' || screen === 'auth') {
       setScreen('tiltprofile');
     }
-  }, [user?.id, tiltProfileInput, activeSession, screen]);
+  }, [user?.id, sessionsBootstrapped, tiltProfileInput, activeSession, screen]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -213,6 +372,17 @@ export default function App() {
       setScreen('tiltprofile-report');
     }
   }, [user?.id, screen, tiltProfileInput, tiltProfileReport]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      refreshSubscriptionStatus();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [user?.id]);
 
   const requireAuth = (message = 'Please log in or create an account to continue.') => {
     if (user?.id) return true;
@@ -253,16 +423,72 @@ export default function App() {
     setScreen('paywall');
   };
 
-  const activatePremium = () => {
+  const activatePremium = async (packageId = selectedPackageId) => {
     if (!user?.id) {
       setAuthPrompt('Create an account to activate premium.');
       setScreen('auth');
       return;
     }
-    const next = updateMonetizationState(user.id, { premium: true });
-    setHasPremium(Boolean(next.premium));
-    setScreen(paywallReturnScreen || 'home');
-    notify('Premium unlocked. You now have full access.');
+    try {
+      setBillingBusy(true);
+      const purchased = await purchasePremium(packageId);
+      const next = updateMonetizationState(user.id, { premium: purchased });
+      setHasPremium(Boolean(next.premium));
+      if (!purchased) {
+        notify('Purchase completed but premium was not detected yet. Try Restore.');
+        return;
+      }
+      setScreen(paywallReturnScreen || 'home');
+      notify('Premium unlocked. You now have full access.');
+    } catch (err) {
+      const raw = String(err?.message || '').toLowerCase();
+      if (raw.includes('cancel')) {
+        notify('Purchase cancelled.');
+        return;
+      }
+      notify(err?.message || 'Could not complete purchase. Please try again.');
+    } finally {
+      setBillingBusy(false);
+    }
+  };
+
+  const handleRestorePurchases = async () => {
+    try {
+      setBillingBusy(true);
+      const restored = await restorePremium();
+      const next = updateMonetizationState(user.id, { premium: restored });
+      setHasPremium(Boolean(next.premium));
+      if (restored) {
+        notify('Purchases restored. Premium is active.');
+        setScreen(paywallReturnScreen || 'home');
+      } else {
+        notify('No active premium subscription found to restore.');
+      }
+    } catch (err) {
+      notify(err?.message || 'Could not restore purchases. Please try again.');
+    } finally {
+      setBillingBusy(false);
+    }
+  };
+
+  const refreshSubscriptionStatus = async () => {
+    if (!user?.id) return;
+    try {
+      setBillingBusy(true);
+      const enabled = await initRevenueCat(user.id);
+      if (!enabled) {
+        notify('Subscription sync is available on native iOS/Android builds.');
+        return;
+      }
+      const premium = await refreshPremiumStatus();
+      updateMonetizationState(user.id, { premium });
+      setHasPremium(Boolean(premium));
+      notify(premium ? 'Premium is active.' : 'No active premium entitlement found.');
+    } catch (err) {
+      notify(err?.message || 'Could not refresh subscription status.');
+    } finally {
+      setBillingBusy(false);
+    }
   };
 
   const startSession = () => {
@@ -467,7 +693,13 @@ export default function App() {
   };
 
   const handleSignOut = async () => {
+    await logoutRevenueCat().catch(() => {});
     await signOut();
+    lastHydratedUserIdRef.current = null;
+    try {
+      sessionStorage.removeItem(SCREEN_STORAGE_KEY);
+      sessionStorage.removeItem(LIVE_SESSION_HINT_KEY);
+    } catch (_) {}
     setScreen('home');
   };
 
@@ -504,10 +736,19 @@ export default function App() {
     openPaywall,
     saveTiltProfile,
     onSignOut: handleSignOut,
+    refreshSubscriptionStatus,
+    billingBusy,
   };
 
-  if (!authReady) {
-    return <div className="screen"><div className="header"><span className="header-title">Loading...</span></div></div>;
+  const appShellReady = authReady && (!user?.id || sessionsBootstrapped);
+  if (!appShellReady) {
+    return (
+      <div className="screen">
+        <div className="header">
+          <span className="header-title">Loading...</span>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -580,12 +821,16 @@ export default function App() {
           <PaywallScreen
             source={paywallContext}
             onUpgrade={activatePremium}
+            selectedPackageId={selectedPackageId}
+            onSelectPackage={setSelectedPackageId}
+            onRestore={handleRestorePurchases}
+            billingBusy={billingBusy}
             onBack={() => setScreen(paywallReturnScreen || 'home')}
             canSkip={paywallContext !== 'tilt_profile_report'}
           />
         )}
-        {screen === 'tiltcheck'  && (hasPremium ? <TiltCheckScreen {...sharedProps} /> : <PaywallScreen source="tilt_check" onUpgrade={activatePremium} onBack={() => setScreen('session')} canSkip />)}
-        {screen === 'result'     && (hasPremium ? <ResultScreen {...sharedProps} /> : <PaywallScreen source="tilt_check" onUpgrade={activatePremium} onBack={() => setScreen('session')} canSkip />)}
+        {screen === 'tiltcheck'  && (hasPremium ? <TiltCheckScreen {...sharedProps} /> : <PaywallScreen source="tilt_check" onUpgrade={activatePremium} selectedPackageId={selectedPackageId} onSelectPackage={setSelectedPackageId} onRestore={handleRestorePurchases} billingBusy={billingBusy} onBack={() => setScreen('session')} canSkip />)}
+        {screen === 'result'     && (hasPremium ? <ResultScreen {...sharedProps} /> : <PaywallScreen source="tilt_check" onUpgrade={activatePremium} selectedPackageId={selectedPackageId} onSelectPackage={setSelectedPackageId} onRestore={handleRestorePurchases} billingBusy={billingBusy} onBack={() => setScreen('session')} canSkip />)}
         {screen === 'endsession' && (
           <EndSessionScreen
             onSaveAndEnd={(note) => endSession(note)}
@@ -601,7 +846,7 @@ export default function App() {
           />
         )}
         {screen === 'learn'      && <LearnScreen      {...sharedProps} />}
-        {screen === 'profile'    && user?.id && <ProfileScreen {...sharedProps} />}
+        {screen === 'profile'    && user?.id && <ProfileScreen {...sharedProps} manageSubscriptionUrl={getSubscriptionManagementUrl()} />}
         {screen === 'auth'       && (
           <AuthScreen
             title="Log In or Sign Up"
@@ -614,6 +859,16 @@ export default function App() {
       </div>
 
       <BottomNav screen={screen} navigate={navigate} hasActiveSession={!!activeSession} />
+
+      {import.meta.env.DEV && (
+        <button
+          className="dev-premium-toggle"
+          onClick={() => setHasPremium((p) => !p)}
+          title="Dev only: toggle premium"
+        >
+          {hasPremium ? '★ Premium ON' : '☆ Premium OFF'}
+        </button>
+      )}
     </div>
   );
 }

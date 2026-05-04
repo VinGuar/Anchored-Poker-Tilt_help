@@ -1,4 +1,4 @@
-import { analyzePatterns } from '../utils/tiltDetection';
+import { analyzePatterns, tiltCheckAnswerToTen } from '../utils/tiltDetection';
 
 export default function StatsScreen({ sessions, accumulatedTilt }) {
   const patterns = analyzePatterns(sessions);
@@ -42,11 +42,17 @@ export default function StatsScreen({ sessions, accumulatedTilt }) {
     ? Math.round((recentTilted.length / recentWithChecks.length) * 100)
     : 0;
 
-  const frustrations = allChecks.map(c => c.answers?.frustrationLevel).filter(Boolean);
-  const avgFrustration =
+  const frustrations = allChecks.map((c) => c.answers?.frustrationLevel).filter((v) => v != null && v !== '');
+  const avgFrustrationRaw =
     frustrations.length > 0
-      ? (frustrations.reduce((a, b) => a + b, 0) / frustrations.length).toFixed(1)
+      ? frustrations.reduce((a, b) => a + Number(b), 0) / frustrations.length
       : null;
+  const avgFrustrationTen =
+    frustrations.length > 0
+      ? frustrations.reduce((a, b) => a + tiltCheckAnswerToTen(b), 0) / frustrations.length
+      : null;
+  const avgFrustration =
+    avgFrustrationRaw != null ? avgFrustrationRaw.toFixed(1) : null;
 
   // Top triggers across all checks
   const triggerCounts = {};
@@ -60,7 +66,14 @@ export default function StatsScreen({ sessions, accumulatedTilt }) {
     .slice(0, 4);
 
   const tiltColor = tiltRate > 50 ? 'var(--red)' : tiltRate > 25 ? 'var(--yellow)' : 'var(--green)';
-  const frColor = avgFrustration >= 7 ? 'var(--red)' : avgFrustration >= 5 ? 'var(--yellow)' : 'var(--green)';
+  const frColor =
+    avgFrustrationTen != null
+      ? avgFrustrationTen >= 7
+        ? 'var(--red)'
+        : avgFrustrationTen >= 5
+          ? 'var(--yellow)'
+          : 'var(--green)'
+      : 'var(--text-secondary)';
 
   return (
     <div className="screen">
@@ -81,7 +94,7 @@ export default function StatsScreen({ sessions, accumulatedTilt }) {
           <div className="stat-value" style={{ color: avgFrustration ? frColor : 'var(--text-secondary)' }}>
             {avgFrustration ?? '—'}
           </div>
-          <div className="stat-label">Avg Frustration</div>
+          <div className="stat-label">Avg frustration (1–5)</div>
         </div>
       </div>
 

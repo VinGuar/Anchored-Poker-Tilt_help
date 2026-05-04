@@ -1,10 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
+import { tiltCheckAnswerToTen } from '../utils/tiltDetection';
 
 function buildRecentCue(sessions) {
   const recent = sessions.slice(0, 5);
   if (recent.length === 0) return 'No recent data yet. Start your first session and establish your baseline.';
-  const rushed = recent.flatMap(s => s.checks || []).filter(c => Number(c.answers?.rushingDecisions ?? 0) >= 6).length;
-  const chase = recent.flatMap(s => s.checks || []).filter(c => Number(c.answers?.chasingLosses ?? 0) >= 6).length;
+  const rushed = recent.flatMap(s => s.checks || []).filter((c) =>
+    tiltCheckAnswerToTen(c.answers?.rushingDecisions ?? 0) >= 6,
+  ).length;
+  const chase = recent.flatMap(s => s.checks || []).filter((c) =>
+    tiltCheckAnswerToTen(c.answers?.chasingLosses ?? 0) >= 6,
+  ).length;
   if (chase >= 2) return 'Recent risk: urgency to recover. Commit to one preflop pause before any chip investment.';
   if (rushed >= 2) return 'Recent risk: rushed decisions. Slow pacing and complete your checklist before acting.';
   return 'Recent trend is stable. Keep your normal process and run an early check-in if tempo changes.';

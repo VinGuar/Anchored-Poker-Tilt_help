@@ -62,6 +62,7 @@ export default function SessionScreen({
   const [pendingEventNote, setPendingEventNote] = useState('');
   const [editingEventIndex, setEditingEventIndex] = useState(null);
   const [expandedEventIndex, setExpandedEventIndex] = useState(null);
+  const [confirmDeleteEventIdx, setConfirmDeleteEventIdx] = useState(null);
   const visibleResetLines = showMoreReset
     ? resetLines.slice(0, Math.min(resetLines.length, 4))
     : (resetLines.length > 0 ? [resetLines[resetCursor % resetLines.length]] : []);
@@ -270,31 +271,50 @@ export default function SessionScreen({
                     </>
                   )}
                   <div className="event-inline-actions">
-                    <button
-                      className="btn btn-ghost btn-inline"
-                      onClick={() => {
-                        setEditingEventIndex(ev._idx);
-                        setPendingEventType(ev.type);
-                        setPendingEventNote(ev.note || '');
-                        setShowEventComposer(true);
-                      }}
-                      aria-label="Edit event"
-                      title="Edit event"
-                    >
-                      ✎
-                    </button>
-                    <button
-                      className="btn btn-ghost btn-inline"
-                      onClick={async () => {
-                        const ok = window.confirm('Delete this event?');
-                        if (!ok) return;
-                        await deleteEvent?.(ev._idx);
-                      }}
-                      aria-label="Delete event"
-                      title="Delete event"
-                    >
-                      -
-                    </button>
+                    {confirmDeleteEventIdx === ev._idx ? (
+                      <>
+                        <span className="note-text" style={{ fontSize: '12px' }}>Delete?</span>
+                        <button
+                          className="btn btn-danger btn-inline"
+                          onClick={async () => {
+                            setConfirmDeleteEventIdx(null);
+                            await deleteEvent?.(ev._idx);
+                          }}
+                        >
+                          Yes
+                        </button>
+                        <button
+                          className="btn btn-ghost btn-inline"
+                          onClick={() => setConfirmDeleteEventIdx(null)}
+                        >
+                          No
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          className="btn btn-ghost btn-inline"
+                          onClick={() => {
+                            setEditingEventIndex(ev._idx);
+                            setPendingEventType(ev.type);
+                            setPendingEventNote(ev.note || '');
+                            setShowEventComposer(true);
+                          }}
+                          aria-label="Edit event"
+                          title="Edit event"
+                        >
+                          ✎
+                        </button>
+                        <button
+                          className="btn btn-ghost btn-inline"
+                          onClick={() => setConfirmDeleteEventIdx(ev._idx)}
+                          aria-label="Delete event"
+                          title="Delete event"
+                        >
+                          -
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))
