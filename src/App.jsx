@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import { App as CapApp } from '@capacitor/app';
 import { runTiltCheck, analyzePatterns, calculateAccumulatedTilt } from './utils/tiltDetection';
 import { getCurrentSession, getCurrentUser, onAuthStateChange, signOut } from './services/authService';
 import { createSession, deleteSessionById, fetchMySessions, updateSession } from './services/sessionsService';
@@ -160,6 +161,22 @@ export default function App() {
       mounted = false;
       authSubscription?.unsubscribe?.();
     };
+  }, []);
+
+  useEffect(() => {
+    const handler = CapApp.addListener('appUrlOpen', ({ url }) => {
+      if (url && url.includes('access_token')) {
+        const params = new URLSearchParams(url.split('#')[1] || url.split('?')[1] || '');
+        const access_token = params.get('access_token');
+        const refresh_token = params.get('refresh_token');
+        if (access_token && refresh_token) {
+          import('./lib/supabase').then(({ supabase }) => {
+            supabase.auth.setSession({ access_token, refresh_token });
+          });
+        }
+      }
+    });
+    return () => { handler.then(h => h.remove()); };
   }, []);
 
   useEffect(() => {
