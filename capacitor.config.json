@@ -2,6 +2,9 @@
   "appId": "com.vinguar.anchored",
   "appName": "Anchored",
   "webDir": "dist",
+  "ios": {
+    "backgroundColor": "#070f1f"
+  },
   "plugins": {
     "StatusBar": {
       "overlaysWebView": false
