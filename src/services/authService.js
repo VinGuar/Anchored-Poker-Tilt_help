@@ -1,3 +1,4 @@
+import { Capacitor } from '@capacitor/core';
 import { supabase } from '../lib/supabase';
 
 export async function signUpWithEmail(email, password, captchaToken) {
@@ -24,11 +25,12 @@ export async function signInWithEmail(email, password, captchaToken) {
 }
 
 export async function signInWithGoogle() {
+  const redirectTo = Capacitor.isNativePlatform()
+    ? 'com.vinguar.anchored://'
+    : window.location.origin;
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
-    options: {
-      redirectTo: window.location.origin,
-    },
+    options: { redirectTo },
   });
   if (error) throw error;
   return data;
