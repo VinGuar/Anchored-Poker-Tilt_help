@@ -1,4 +1,5 @@
 import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 import { supabase } from '../lib/supabase';
 
 export async function signUpWithEmail(email, password, captchaToken) {
@@ -25,15 +26,28 @@ export async function signInWithEmail(email, password, captchaToken) {
 }
 
 export async function signInWithGoogle() {
-  const redirectTo = Capacitor.isNativePlatform()
-    ? 'com.vinguar.anchored://'
-    : window.location.origin;
+  if (Capacitor.isNativePlatform()) {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: 'com.vinguar.anchored://',
+        skipBrowserRedirect: true,
+      },
+    });
+    if (error) throw error;
+    if (data?.url) await Browser.open({ url: data.url });
+    return data;
+  }
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo },
+    options: { redirectTo: window.location.origin },
   });
   if (error) throw error;
   return data;
+}
+
+export async function closeBrowser() {
+  if (Capacitor.isNativePlatform()) await Browser.close();
 }
 
 export async function signOut() {

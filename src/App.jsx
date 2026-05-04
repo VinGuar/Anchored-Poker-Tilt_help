@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { App as CapApp } from '@capacitor/app';
 import { runTiltCheck, analyzePatterns, calculateAccumulatedTilt } from './utils/tiltDetection';
-import { getCurrentSession, getCurrentUser, onAuthStateChange, signOut } from './services/authService';
+import { getCurrentSession, getCurrentUser, onAuthStateChange, signOut, closeBrowser } from './services/authService';
 import { createSession, deleteSessionById, fetchMySessions, updateSession } from './services/sessionsService';
 import { getMySettings, upsertMySettings } from './services/settingsService';
 import { getMonetizationState, updateMonetizationState } from './services/monetizationService';
@@ -165,15 +165,16 @@ export default function App() {
 
   useEffect(() => {
     const handler = CapApp.addListener('appUrlOpen', ({ url }) => {
-      if (url && url.includes('access_token')) {
-        const params = new URLSearchParams(url.split('#')[1] || url.split('?')[1] || '');
-        const access_token = params.get('access_token');
-        const refresh_token = params.get('refresh_token');
-        if (access_token && refresh_token) {
-          import('./lib/supabase').then(({ supabase }) => {
-            supabase.auth.setSession({ access_token, refresh_token });
-          });
-        }
+      if (!url) return;
+      const fragment = url.split('#')[1] || url.split('?')[1] || '';
+      const params = new URLSearchParams(fragment);
+      const access_token = params.get('access_token');
+      const refresh_token = params.get('refresh_token');
+      if (access_token && refresh_token) {
+        import('./lib/supabase').then(({ supabase }) => {
+          supabase.auth.setSession({ access_token, refresh_token });
+        });
+        closeBrowser().catch(() => {});
       }
     });
     return () => { handler.then(h => h.remove()); };
