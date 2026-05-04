@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { App as CapApp } from '@capacitor/app';
+import { Browser } from '@capacitor/browser';
 import { runTiltCheck, analyzePatterns, calculateAccumulatedTilt } from './utils/tiltDetection';
 import { getCurrentSession, getCurrentUser, onAuthStateChange, signOut, closeBrowser } from './services/authService';
 import { createSession, deleteSessionById, fetchMySessions, updateSession } from './services/sessionsService';
@@ -164,25 +165,43 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const handler = CapApp.addListener('appUrlOpen', async ({ url }) => {
-      if (!url) return;
+    const processAuthUrl = async (url) => {
+      if (!url) return false;
       const { supabase } = await import('./lib/supabase');
       try {
         if (url.includes('code=')) {
           await supabase.auth.exchangeCodeForSession(url);
-        } else {
-          const fragment = url.split('#')[1] || url.split('?')[1] || '';
-          const params = new URLSearchParams(fragment);
-          const access_token = params.get('access_token');
-          const refresh_token = params.get('refresh_token');
-          if (access_token && refresh_token) {
-            await supabase.auth.setSession({ access_token, refresh_token });
-          }
+          return true;
+        }
+        const fragment = url.split('#')[1] || url.split('?')[1] || '';
+        const params = new URLSearchParams(fragment);
+        const access_token = params.get('access_token');
+        const refresh_token = params.get('refresh_token');
+        if (access_token && refresh_token) {
+          await supabase.auth.setSession({ access_token, refresh_token });
+          return true;
         }
       } catch (_) {}
+      return false;
+    };
+
+    const urlHandler = CapApp.addListener('appUrlOpen', async ({ url }) => {
+      await processAuthUrl(url);
       closeBrowser().catch(() => {});
     });
-    return () => { handler.then(h => h.remove()); };
+
+    const browserHandler = Browser.addListener('browserFinished', async () => {
+      const { supabase } = await import('./lib/supabase');
+      const { data } = await supabase.auth.getSession();
+      if (!data?.session) {
+        await supabase.auth.refreshSession().catch(() => {});
+      }
+    });
+
+    return () => {
+      urlHandler.then(h => h.remove());
+      browserHandler.then(h => h.remove());
+    };
   }, []);
 
   useEffect(() => {

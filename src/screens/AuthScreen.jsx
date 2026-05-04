@@ -148,10 +148,16 @@ export default function AuthScreen({ title = 'Log In', subtitle = '', onBack }) 
           />
         )}
 
+        {Capacitor.isNativePlatform() && (
+          <div className="note-text" style={{ marginTop: '8px', textAlign: 'center', fontSize: '12px' }}>
+            Google sign-in coming soon. Use email and password below.
+          </div>
+        )}
         <button
           className="btn btn-secondary"
           style={{ marginTop: '8px' }}
-          onClick={continueWithGoogle}
+          onClick={Capacitor.isNativePlatform() ? undefined : continueWithGoogle}
+          disabled={busy || Capacitor.isNativePlatform()}
           disabled={busy}
         >
           Continue with Google
