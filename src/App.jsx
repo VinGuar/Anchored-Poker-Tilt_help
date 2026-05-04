@@ -164,18 +164,23 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const handler = CapApp.addListener('appUrlOpen', ({ url }) => {
+    const handler = CapApp.addListener('appUrlOpen', async ({ url }) => {
       if (!url) return;
-      const fragment = url.split('#')[1] || url.split('?')[1] || '';
-      const params = new URLSearchParams(fragment);
-      const access_token = params.get('access_token');
-      const refresh_token = params.get('refresh_token');
-      if (access_token && refresh_token) {
-        import('./lib/supabase').then(({ supabase }) => {
-          supabase.auth.setSession({ access_token, refresh_token });
-        });
-        closeBrowser().catch(() => {});
-      }
+      const { supabase } = await import('./lib/supabase');
+      try {
+        if (url.includes('code=')) {
+          await supabase.auth.exchangeCodeForSession(url);
+        } else {
+          const fragment = url.split('#')[1] || url.split('?')[1] || '';
+          const params = new URLSearchParams(fragment);
+          const access_token = params.get('access_token');
+          const refresh_token = params.get('refresh_token');
+          if (access_token && refresh_token) {
+            await supabase.auth.setSession({ access_token, refresh_token });
+          }
+        }
+      } catch (_) {}
+      closeBrowser().catch(() => {});
     });
     return () => { handler.then(h => h.remove()); };
   }, []);
