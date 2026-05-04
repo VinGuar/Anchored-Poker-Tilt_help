@@ -1,5 +1,6 @@
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
+import { SignInWithApple } from '@capacitor-community/apple-sign-in';
 import { supabase } from '../lib/supabase';
 
 export async function signUpWithEmail(email, password, captchaToken) {
@@ -48,6 +49,20 @@ export async function signInWithGoogle() {
 
 export async function closeBrowser() {
   if (Capacitor.isNativePlatform()) await Browser.close();
+}
+
+export async function signInWithApple() {
+  const result = await SignInWithApple.authorize({
+    clientId: 'com.vinguar.anchored',
+    redirectURI: `${import.meta.env.VITE_SUPABASE_URL}/auth/v1/callback`,
+    scopes: 'email name',
+  });
+  const { data, error } = await supabase.auth.signInWithIdToken({
+    provider: 'apple',
+    token: result.response.identityToken,
+  });
+  if (error) throw error;
+  return data;
 }
 
 export async function signOut() {

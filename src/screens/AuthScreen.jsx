@@ -2,12 +2,14 @@ import { useRef, useState } from 'react';
 import HCaptcha from '@hcaptcha/react-hcaptcha';
 import { Capacitor } from '@capacitor/core';
 import BrandLogo from '../components/BrandLogo';
-import { signInWithEmail, signInWithGoogle, signUpWithEmail } from '../services/authService';
+import { signInWithApple, signInWithEmail, signInWithGoogle, signUpWithEmail } from '../services/authService';
 import { APP_META } from '../config/appMeta';
 
 const HCAPTCHA_SITEKEY = (import.meta.env.DEV || Capacitor.isNativePlatform())
   ? ''
   : (import.meta.env.VITE_HCAPTCHA_SITEKEY || '');
+
+const isNative = Capacitor.isNativePlatform();
 
 export default function AuthScreen({ title = 'Log In', subtitle = '', onBack }) {
   const [mode, setMode] = useState('signin');
@@ -44,8 +46,6 @@ export default function AuthScreen({ title = 'Log In', subtitle = '', onBack }) 
         const data = await signUpWithEmail(pending.email, pending.password, captchaToken);
         if (!data.session) {
           setInfo('Account created. Check your email and confirm before signing in.');
-        } else {
-          setInfo('Account created and signed in.');
         }
       } else {
         await signInWithEmail(pending.email, pending.password, captchaToken);
@@ -53,7 +53,7 @@ export default function AuthScreen({ title = 'Log In', subtitle = '', onBack }) 
     } catch (err) {
       const msg = String(err?.message || '').toLowerCase();
       if (msg.includes('already registered') || msg.includes('already exists') || msg.includes('user already')) {
-        setError('An account with this email already exists. Try logging in, or use Google sign-in if you registered with Google.');
+        setError('An account with this email already exists. Try logging in instead.');
       } else if (msg.includes('invalid login') || msg.includes('invalid credentials')) {
         setError('Incorrect email or password.');
       } else {
@@ -65,20 +65,31 @@ export default function AuthScreen({ title = 'Log In', subtitle = '', onBack }) 
     }
   };
 
-  const handleCaptchaVerify = (token) => {
-    runAuth(token);
-  };
-
+  const handleCaptchaVerify = (token) => { runAuth(token); };
   const handleCaptchaError = () => {
     pendingAuthRef.current = null;
     setBusy(false);
     setError('CAPTCHA verification failed. Please try again.');
     captchaRef.current?.resetCaptcha();
   };
-
   const handleCaptchaExpire = () => {
     pendingAuthRef.current = null;
     captchaRef.current?.resetCaptcha();
+  };
+
+  const continueWithApple = async () => {
+    setError('');
+    setInfo('');
+    setBusy(true);
+    try {
+      await signInWithApple();
+    } catch (err) {
+      const msg = String(err?.message || '').toLowerCase();
+      if (msg.includes('cancel') || msg.includes('dismiss')) return;
+      setError(err.message || 'Apple sign-in failed. Please try again.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const continueWithGoogle = async () => {
@@ -87,14 +98,8 @@ export default function AuthScreen({ title = 'Log In', subtitle = '', onBack }) 
     setBusy(true);
     try {
       await signInWithGoogle();
-      setInfo('Redirecting to Google...');
     } catch (err) {
-      const raw = String(err?.message || '');
-      if (raw.toLowerCase().includes('provider is not enabled') || raw.toLowerCase().includes('unsupported provider')) {
-        setError('Google sign-in is not enabled in Supabase yet. Enable Google under Supabase Auth > Providers, then add your Google OAuth client ID/secret.');
-      } else {
-        setError(raw || 'Google sign-in failed.');
-      }
+      setError(err.message || 'Google sign-in failed.');
     } finally {
       setBusy(false);
     }
@@ -112,6 +117,35 @@ export default function AuthScreen({ title = 'Log In', subtitle = '', onBack }) 
       <div className="card auth-card">
         <div className="card-title">{isSignUp ? 'Create Account' : title}</div>
         {subtitle && <div className="note-text" style={{ marginBottom: '12px' }}>{subtitle}</div>}
+
+        {isNative && (
+          <button
+            className="btn btn-secondary"
+            style={{ marginBottom: '12px', background: '#000', color: '#fff', border: 'none' }}
+            onClick={continueWithApple}
+            disabled={busy}
+          >
+            Sign in with Apple
+          </button>
+        )}
+
+        {!isNative && (
+          <button
+            className="btn btn-secondary"
+            style={{ marginBottom: '12px' }}
+            onClick={continueWithGoogle}
+            disabled={busy}
+          >
+            Continue with Google
+          </button>
+        )}
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+          <div style={{ flex: 1, height: '1px', background: 'var(--border-soft)' }} />
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>or</span>
+          <div style={{ flex: 1, height: '1px', background: 'var(--border-soft)' }} />
+        </div>
+
         <form className="auth-form" onSubmit={submit}>
           <input
             className="auth-input"
@@ -148,37 +182,15 @@ export default function AuthScreen({ title = 'Log In', subtitle = '', onBack }) 
           />
         )}
 
-        {Capacitor.isNativePlatform() && (
-          <div className="note-text" style={{ marginTop: '8px', textAlign: 'center', fontSize: '12px' }}>
-            Google sign-in coming soon. Use email and password below.
-          </div>
-        )}
-        <button
-          className="btn btn-secondary"
-          style={{ marginTop: '8px' }}
-          onClick={Capacitor.isNativePlatform() ? undefined : continueWithGoogle}
-          disabled={busy || Capacitor.isNativePlatform()}
-          disabled={busy}
-        >
-          Continue with Google
-        </button>
         <button
           className="btn btn-ghost"
           style={{ marginTop: '8px' }}
-          onClick={() => {
-            setMode(isSignUp ? 'signin' : 'signup');
-            setError('');
-            setInfo('');
-          }}
+          onClick={() => { setMode(isSignUp ? 'signin' : 'signup'); setError(''); setInfo(''); }}
         >
           {isSignUp ? 'Have an account? Log in' : 'Need an account? Sign up'}
         </button>
         {typeof onBack === 'function' && (
-          <button
-            className="btn btn-ghost"
-            style={{ marginTop: '8px' }}
-            onClick={onBack}
-          >
+          <button className="btn btn-ghost" style={{ marginTop: '8px' }} onClick={onBack}>
             Continue browsing
           </button>
         )}
