@@ -38,7 +38,9 @@ export async function initRevenueCat(appUserId) {
 
 export async function logoutRevenueCat() {
   if (!configured || !isNative()) return;
-  await Purchases.logOut();
+  try {
+    await Purchases.logOut();
+  } catch (_) {}
 }
 
 export async function hasPremiumEntitlement() {

@@ -1,10 +1,13 @@
 import { useRef, useState } from 'react';
 import HCaptcha from '@hcaptcha/react-hcaptcha';
+import { Capacitor } from '@capacitor/core';
 import BrandLogo from '../components/BrandLogo';
 import { signInWithEmail, signInWithGoogle, signUpWithEmail } from '../services/authService';
 import { APP_META } from '../config/appMeta';
 
-const HCAPTCHA_SITEKEY = import.meta.env.DEV ? '' : (import.meta.env.VITE_HCAPTCHA_SITEKEY || '');
+const HCAPTCHA_SITEKEY = (import.meta.env.DEV || Capacitor.isNativePlatform())
+  ? ''
+  : (import.meta.env.VITE_HCAPTCHA_SITEKEY || '');
 
 export default function AuthScreen({ title = 'Log In', subtitle = '', onBack }) {
   const [mode, setMode] = useState('signin');
