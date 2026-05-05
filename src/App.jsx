@@ -699,7 +699,6 @@ export default function App() {
   const requestEndSession = () => setScreen('endsession');
   const sessionsForDailyQuota = mergeActiveIntoSessionsList(sessions, activeSession);
   const freeCheckUsed = !hasPremium && hasUsedFreeCheckToday(sessionsForDailyQuota);
-  const hasAnyCheckData = sessions.some(s => s.checks.length > 0);
 
   const requestTiltCheck = () => {
     if (freeCheckUsed) {
@@ -843,7 +842,6 @@ export default function App() {
     user,
     hasPremium,
     freeCheckUsed,
-    hasAnyCheckData,
     tiltProfileInput,
     tiltProfileReport,
     openPaywall,

@@ -450,16 +450,6 @@ const FILTERS = [
   { label: 'All', days: null },
 ];
 
-const DUMMY_POINTS = [
-  { score: 78, status: 'tilt' },
-  { score: 52, status: 'warning' },
-  { score: 61, status: 'warning' },
-  { score: 28, status: 'clear' },
-  { score: 70, status: 'tilt' },
-  { score: 33, status: 'clear' },
-  { score: 45, status: 'warning' },
-];
-
 function LockedOverlay({ onUnlock }) {
   return (
     <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px', borderRadius: 'var(--radius)', backdropFilter: 'blur(1px)', background: 'rgba(0,0,0,0.18)' }}>
@@ -472,37 +462,34 @@ function LockedOverlay({ onUnlock }) {
   );
 }
 
-function TiltTrendChart({ sessions, hasPremium, onUnlock }) {
+function TiltTrendChart({ sessions }) {
   const [filter, setFilter] = useState('3M');
   const W = 300, H = 90, PAD_X = 12, PAD_Y = 10;
 
   const activeDays = FILTERS.find(f => f.label === filter)?.days ?? null;
   const cutoff = activeDays ? Date.now() - activeDays * 86400000 : 0;
 
-  const realPoints = [...sessions]
-    .filter(s => s.startTime >= cutoff)
+  const points = [...sessions]
+    .filter((s) => s.startTime >= cutoff && s.checks?.length > 0)
     .sort((a, b) => a.startTime - b.startTime)
-    .map(s => ({ score: sessionWeightedScore(s), status: sessionStatus(s), ts: s.startTime }));
-
-  const locked = !hasPremium;
-  const points = locked ? DUMMY_POINTS : realPoints;
+    .map((s) => ({ score: sessionWeightedScore(s), status: sessionStatus(s), ts: s.startTime }));
 
   const filterBar = (
     <div style={{ display: 'flex', gap: '4px', marginBottom: '10px' }}>
-      {FILTERS.map(f => (
+      {FILTERS.map((f) => (
         <button
           key={f.label}
-          onClick={() => !locked && setFilter(f.label)}
+          type="button"
+          onClick={() => setFilter(f.label)}
           style={{
             padding: '3px 8px',
             fontSize: '11px',
             fontWeight: '700',
             borderRadius: '6px',
             border: 'none',
-            cursor: locked ? 'default' : 'pointer',
+            cursor: 'pointer',
             background: filter === f.label ? 'var(--accent, #6366f1)' : 'var(--surface-2)',
             color: filter === f.label ? '#fff' : 'var(--text-secondary)',
-            opacity: locked ? 0.5 : 1,
           }}
         >
           {f.label}
@@ -511,12 +498,14 @@ function TiltTrendChart({ sessions, hasPremium, onUnlock }) {
     </div>
   );
 
-  if (!locked && points.length < 2) {
+  if (points.length < 2) {
     return (
       <div>
         {filterBar}
         <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px', padding: '16px 0' }}>
-          {points.length === 0 ? 'No check-ins in this range' : 'Need at least 2 sessions with check-ins'}
+          {points.length === 0
+            ? 'No sessions with check-ins in this range'
+            : 'Need at least 2 sessions with check-ins for a trend line'}
         </div>
       </div>
     );
@@ -552,22 +541,19 @@ function TiltTrendChart({ sessions, hasPremium, onUnlock }) {
           <circle key={i} cx={xOf(i)} cy={yOf(p.score)} r="4" fill={dotColor(p.status)} stroke="var(--surface)" strokeWidth="1.5" />
         ))}
       </svg>
-      {!locked && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
-          <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-            {new Date(points[0].ts).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-          </span>
-          <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-            {new Date(points[points.length - 1].ts).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-          </span>
-        </div>
-      )}
-      {locked && <LockedOverlay onUnlock={onUnlock} />}
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+        <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+          {new Date(points[0].ts).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+        </span>
+        <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+          {new Date(points[points.length - 1].ts).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+        </span>
+      </div>
     </div>
   );
 }
 
-export default function InsightsScreen({ sessions, tiltProfileReport, hasPremium, hasAnyCheckData, navigate, openPaywall }) {
+export default function InsightsScreen({ sessions, tiltProfileReport, hasPremium, navigate, openPaywall }) {
   const allChecks = sessions.flatMap(s => s.checks);
   const sessionsWithChecks = sessions.filter(s => s.checks.length > 0);
   const tiltSessions = sessionsWithChecks.filter(s => sessionStatus(s) === 'tilt').length;
@@ -603,17 +589,17 @@ export default function InsightsScreen({ sessions, tiltProfileReport, hasPremium
           <div className="stat-value">{sessions.length}</div>
           <div className="stat-label">Sessions</div>
         </div>
-        <div className="stat-card" style={{ position: 'relative', overflow: 'hidden' }}>
-          {hasAnyCheckData ? (
+        <div className="stat-card">
+          {sessionsWithChecks.length > 0 ? (
             <>
               <div className="stat-value" style={{ color: tiltRate > 50 ? 'var(--red)' : tiltRate > 25 ? 'var(--yellow)' : 'var(--green)' }}>{tiltRate}%</div>
               <div className="stat-label">Tilt Sessions</div>
             </>
           ) : (
             <>
-              <div className="stat-value" style={{ filter: 'blur(5px)', userSelect: 'none', color: 'var(--red)' }}>67%</div>
+              <div className="stat-value" style={{ color: 'var(--text-secondary)' }}>—</div>
               <div className="stat-label">Tilt Sessions</div>
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>🔒</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>No check-in data yet</div>
             </>
           )}
         </div>
@@ -621,7 +607,7 @@ export default function InsightsScreen({ sessions, tiltProfileReport, hasPremium
 
       <div className="stat-row">
         <div className="stat-card" style={{ gridColumn: '1 / -1' }}>
-          <TiltTrendChart sessions={sessions} hasPremium={hasAnyCheckData} onUnlock={() => openPaywall?.('tilt_check', 'insights')} />
+          <TiltTrendChart sessions={sessions} />
         </div>
       </div>
 
