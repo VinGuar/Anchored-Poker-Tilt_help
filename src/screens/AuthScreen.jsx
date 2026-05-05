@@ -98,9 +98,22 @@ export default function AuthScreen({ title = 'Log In', subtitle = '' }) {
     try {
       await signInWithApple();
     } catch (err) {
-      const msg = String(err?.message || '').toLowerCase();
+      const raw = String(err?.message || err?.errorMessage || JSON.stringify(err || {}));
+      const msg = raw.toLowerCase();
       if (msg.includes('cancel') || msg.includes('dismiss')) return;
-      setError(err.message || 'Apple sign-in failed. Please try again.');
+      // ASAuthorization error 1000 + LaunchServices -54 often appear on Simulator / dev installs; prod TestFlight usually fine.
+      if (
+        raw.includes('1000')
+        || raw.includes('authorizationerror')
+        || raw.includes('-7026')
+        || raw.includes('process may not map database')
+      ) {
+        setError(
+          'Apple Sign In couldn’t finish on this device (common on Simulator). Try a real iPhone with the TestFlight or App Store build, or use email login.',
+        );
+        return;
+      }
+      setError(err?.message || err?.errorMessage || 'Apple sign-in failed. Please try again.');
     } finally {
       setBusy(false);
     }
