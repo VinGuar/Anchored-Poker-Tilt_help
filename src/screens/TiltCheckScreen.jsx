@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { tiltCheckAnswerToTen } from '../utils/tiltDetection';
 
 const SCALE_KEYS = ['rushingDecisions', 'playingLooser', 'frustrationLevel', 'chasingLosses'];
@@ -6,25 +6,25 @@ const SCALE_KEYS = ['rushingDecisions', 'playingLooser', 'frustrationLevel', 'ch
 /** Check 5 is always keyed `selfCriticism` for scoring; copy is fixed per primary profile persona. */
 const PERSONA_CHECK5 = {
   injustice: {
-    text: 'Does bad luck feel personal or “unfair” right now?',
-    sub: '1 = no, it’s just cards · 5 = yes, it feels aimed at me',
+    text: 'Does bad luck feel personal or "unfair" right now?',
+    sub: '1 = no, it\'s just cards · 5 = yes, it feels aimed at me',
     low: 'not personal',
     high: 'very personal',
-    info: 'Sometimes losses feel random; other times they feel like the deck is picking on you. That feeling can change how aggressively you play. You’re not judging whether a hand was played perfectly—just how “personal” the luck feels in your gut.',
+    info: 'Sometimes losses feel random; other times they feel like the deck is picking on you. That feeling can change how aggressively you play. You\'re not judging whether a hand was played perfectly—just how "personal" the luck feels in your gut.',
   },
   revenge: {
     text: 'Is one person at the table stuck in your head between hands?',
     sub: '1 = not at all · 5 = yes, a lot',
     low: 'not at all',
     high: 'a lot',
-    info: 'When we’re annoyed at someone, it’s easy to make decisions just to “get them back.” This checks whether someone is living in your head, not whether you like them as a person.',
+    info: 'When we\'re annoyed at someone, it\'s easy to make decisions just to "get them back." This checks whether someone is living in your head, not whether you like them as a person.',
   },
   entitlement: {
     text: 'Does it feel like the game owes you a win right now?',
     sub: '1 = not really · 5 = yes, strongly',
     low: 'no',
     high: 'yes',
-    info: 'Hope is normal. This is about a stronger feeling—that results should already be going your way because of how you’ve played or how long you’ve waited. That feeling can push people into bigger risks.',
+    info: 'Hope is normal. This is about a stronger feeling—that results should already be going your way because of how you\'ve played or how long you\'ve waited. That feeling can push people into bigger risks.',
   },
   desperation: {
     text: 'How badly do you need something good to happen right now?',
@@ -38,22 +38,22 @@ const PERSONA_CHECK5 = {
     sub: '1 = today feels separate · 5 = feels like more of the same',
     low: 'separate',
     high: 'same run',
-    info: 'After a rough stretch, it’s common for a new session to feel glued to that story even when it’s a new day. That can make you play looser or tighter without noticing.',
+    info: 'After a rough stretch, it\'s common for a new session to feel glued to that story even when it\'s a new day. That can make you play looser or tighter without noticing.',
   },
   winners: {
-    text: 'Are you playing more hands because you’ve been winning?',
+    text: 'Are you playing more hands because you\'ve been winning?',
     sub: '1 = fewer hands than usual · 5 = more hands than usual',
     low: 'less',
     mid: 'same',
     high: 'more',
-    info: 'Winning feels good, and it’s easy to loosen up when chips are coming. 1 means fewer pots than your normal day, 5 means clearly more; use the middle of the scale if it’s about your usual amount.',
+    info: 'Winning feels good, and it\'s easy to loosen up when chips are coming. 1 means fewer pots than your normal day, 5 means clearly more; use the middle of the scale if it\'s about your usual amount.',
   },
   boredom: {
     text: 'How much do you want action instead of waiting?',
     sub: '1 = fine waiting · 5 = really want a pot',
     low: 'fine waiting',
     high: 'want a pot',
-    info: 'Poker has a lot of folding. When we’re bored, we sometimes jump into pots just to see cards. That’s all this question is about.',
+    info: 'Poker has a lot of folding. When we\'re bored, we sometimes jump into pots just to see cards. That\'s all this question is about.',
   },
   mistake: {
     text: 'Are you still upset about a mistake from earlier?',
@@ -69,7 +69,7 @@ const PERSONA_CHECK5_FALLBACK = {
   sub: '1 = focused on now · 5 = still replaying it',
   low: 'now',
   high: 'replaying',
-  info: 'Choose 1 if you’re thinking mainly about the hand in front of you. Choose 5 if something from before keeps pulling your attention.',
+  info: 'Choose 1 if you\'re thinking mainly about the hand in front of you. Choose 5 if something from before keeps pulling your attention.',
 };
 
 function getPrimaryPersonaKey(tiltProfile) {
@@ -136,7 +136,7 @@ function buildContext(session, accumulatedTilt, tiltProfile) {
   };
 }
 
-/** Whether the “sheet” (ahead vs stuck) signal is strong enough to earn its own themed slot. */
+/** Whether the "sheet" (ahead vs stuck) signal is strong enough to earn its own themed slot. */
 function sheetThemeRelevant(c) {
   return (
     c.isUp ||
@@ -263,12 +263,12 @@ function broadRushing(c) {
   const p = personaForBroad(c);
   if (p === 'boredom' || p === 'mistake') {
     return {
-      text: 'Do your hands feel calm, or like you’re on fast-forward?',
+      text: 'Do your hands feel calm, or like you\'re on fast-forward?',
       sub: '1 = calmer than usual · 5 = more sped up than usual',
       low: 'less',
       mid: 'same',
       high: 'more',
-      info: '“Sped up” means you tap faster, decide sooner, or feel antsy between hands. 1 is calmer than your norm, 5 is faster than your norm; the middle matches your usual pace.',
+      info: '"Sped up" means you tap faster, decide sooner, or feel antsy between hands. 1 is calmer than your norm, 5 is faster than your norm; the middle matches your usual pace.',
     };
   }
   if (p === 'winners') {
@@ -300,7 +300,7 @@ function broadLooser(c) {
       low: 'less',
       mid: 'same',
       high: 'more',
-      info: 'Don’t count exact hands—just your gut vs a typical session. 1 is clearly fewer pots, 5 is clearly more; use the middle if it’s about your usual amount.',
+      info: 'Don\'t count exact hands—just your gut vs a typical session. 1 is clearly fewer pots, 5 is clearly more; use the middle if it\'s about your usual amount.',
     };
   }
   if (p === 'desperation' || p === 'running_bad') {
@@ -310,7 +310,7 @@ function broadLooser(c) {
       low: 'less',
       mid: 'same',
       high: 'more',
-      info: 'When we’re stressed or on a bad run, some people play extra hands to “do something” about how they feel. 1 is fewer pots than your norm, 5 is more than usual; the middle is typical volume for you.',
+      info: 'When we\'re stressed or on a bad run, some people play extra hands to "do something" about how they feel. 1 is fewer pots than your norm, 5 is more than usual; the middle is typical volume for you.',
     };
   }
   return {
@@ -319,7 +319,7 @@ function broadLooser(c) {
     low: 'tighter',
     mid: 'same',
     high: 'looser',
-    info: 'Looser means more calls and more “why not” hands. Tighter means fewer. 1 is tighter than your norm, 5 is looser; the middle fits your usual style.',
+    info: 'Looser means more calls and more "why not" hands. Tighter means fewer. 1 is tighter than your norm, 5 is looser; the middle fits your usual style.',
   };
 }
 
@@ -331,16 +331,16 @@ function broadFrustration(c) {
       sub: '1 = clear · 5 = very noisy or busy',
       low: 'clear',
       high: 'noisy',
-      info: 'Not about strategy—about mental static: replaying hands, irritation, dread, or just a busy brain that won’t settle.',
+      info: 'Not about strategy—about mental static: replaying hands, irritation, dread, or just a busy brain that won\'t settle.',
     };
   }
   if (p === 'revenge') {
     return {
       text: 'Does the table feel personal right now?',
-      sub: '1 = no, it’s just a game · 5 = yes, very personal',
+      sub: '1 = no, it\'s just a game · 5 = yes, very personal',
       low: 'just a game',
       high: 'personal',
-      info: '“Personal” means you’re thinking about people, slights, or fairness—not only about cards and math.',
+      info: '"Personal" means you\'re thinking about people, slights, or fairness—not only about cards and math.',
     };
   }
   return {
@@ -348,7 +348,7 @@ function broadFrustration(c) {
     sub: '1 = calm · 5 = very upset or tense',
     low: 'calm',
     high: 'upset',
-    info: 'First gut answer is fine. Upset can mean angry, anxious, embarrassed, or wound up—any flavor of “not calm.”',
+    info: 'First gut answer is fine. Upset can mean angry, anxious, embarrassed, or wound up—any flavor of "not calm."',
   };
 }
 
@@ -364,7 +364,7 @@ function broadChasing(c) {
     };
   }
   return {
-    text: 'How much do you want to “make something happen” to change how you’re doing?',
+    text: 'How much do you want to "make something happen" to change how you\'re doing?',
     sub: '1 = little · 5 = a lot',
     low: 'little',
     high: 'a lot',
@@ -380,13 +380,13 @@ function pickRushing(c, theme) {
       low: 'less',
       mid: 'same',
       high: 'more',
-      info: '“Rushed” means less thinking time than usual, or feeling antsy. 1 is calmer than at your last check, 5 is more rushed than then; the middle feels about the same speed as then.',
+      info: '"Rushed" means less thinking time than usual, or feeling antsy. 1 is calmer than at your last check, 5 is more rushed than then; the middle feels about the same speed as then.',
     };
   }
   if (theme === 'baseline' && c.pre?.energy === 'low') {
     return {
       text: 'You said you were tired before playing. How much does that show in your speed?',
-      sub: '1 = not much · 5 = a lot—I’m dragging or snapping',
+      sub: '1 = not much · 5 = a lot—I\'m dragging or snapping',
       low: 'not much',
       high: 'a lot',
       info: 'Low energy can make people play slower on purpose, or the opposite—snap decisions because thinking feels hard. Either pattern counts; pick what fits.',
@@ -399,7 +399,7 @@ function pickRushing(c, theme) {
         sub: '1 = no, I can wait · 5 = yes, a lot',
         low: 'no',
         high: 'yes',
-        info: 'Dead stretches happen. This asks if you’re speeding up or jumping in just to see something happen, instead of waiting for a good spot.',
+        info: 'Dead stretches happen. This asks if you\'re speeding up or jumping in just to see something happen, instead of waiting for a good spot.',
       };
     }
     return broadRushing(c);
@@ -407,7 +407,7 @@ function pickRushing(c, theme) {
   if (theme === 'sheet') {
     if (c.isUp) {
       return {
-        text: 'While you’re ahead, do decisions feel calmer or more rushed?',
+        text: 'While you\'re ahead, do decisions feel calmer or more rushed?',
         sub: '1 = less rushed than usual · 5 = more rushed than usual',
         low: 'less',
         mid: 'same',
@@ -416,12 +416,12 @@ function pickRushing(c, theme) {
       };
     }
     return {
-      text: 'When you’re down, do your decisions feel calmer or more rushed?',
+      text: 'When you\'re down, do your decisions feel calmer or more rushed?',
       sub: '1 = less rushed than usual · 5 = more rushed than usual',
       low: 'less',
       mid: 'same',
       high: 'more',
-      info: 'Being behind can make people hurry to “fix” the session. 1 is calmer than your norm, 5 is more rushed than usual; the middle is your usual speed.',
+      info: 'Being behind can make people hurry to "fix" the session. 1 is calmer than your norm, 5 is more rushed than usual; the middle is your usual speed.',
     };
   }
   return broadRushing(c);
@@ -435,7 +435,7 @@ function pickLooser(c, theme) {
       low: 'less',
       mid: 'same',
       high: 'more',
-      info: 'Stress from past days can make us play extra hands without noticing. You don’t need exact counts—1 is clearly fewer than your norm, 5 is clearly more; the middle is about your usual volume.',
+      info: 'Stress from past days can make us play extra hands without noticing. You don\'t need exact counts—1 is clearly fewer than your norm, 5 is clearly more; the middle is about your usual volume.',
     };
   }
   if (theme === 'lastCheck') {
@@ -445,22 +445,22 @@ function pickLooser(c, theme) {
       low: 'tighter',
       mid: 'same',
       high: 'looser',
-      info: 'Looser means more hands or calls you might usually skip. Tighter means fewer. If you’re about the same as last time, use the center of the scale.',
+      info: 'Looser means more hands or calls you might usually skip. Tighter means fewer. If you\'re about the same as last time, use the center of the scale.',
     };
   }
   if (theme === 'sheet') {
     if (c.isUp) {
       return {
-        text: 'While you’re winning, how does your hand volume compare to normal?',
+        text: 'While you\'re winning, how does your hand volume compare to normal?',
         sub: '1 = fewer than usual · 5 = more than usual',
         low: 'less',
         mid: 'same',
         high: 'more',
-        info: 'Good runs can make us play “reward” hands we’d skip on an average day. 1 is fewer pots than your norm, 5 is more; the middle is your usual amount.',
+        info: 'Good runs can make us play "reward" hands we\'d skip on an average day. 1 is fewer pots than your norm, 5 is more; the middle is your usual amount.',
       };
     }
     return {
-      text: 'While you’re down, how does your hand volume compare to normal?',
+      text: 'While you\'re down, how does your hand volume compare to normal?',
       sub: '1 = fewer than usual · 5 = more than usual',
       low: 'less',
       mid: 'same',
@@ -482,15 +482,22 @@ function pickFrustration(c, theme) {
         sub: '1 = not much anymore · 5 = still bothers me a lot',
         low: 'not much',
         high: 'a lot',
-        info: 'Rough stretch means hands that stung—bad beats, big losses, or spots that felt awful. You’re rating feelings, not whether you played perfectly.',
+        info: 'Rough stretch means hands that stung—bad beats, big losses, or spots that felt awful. You\'re rating feelings, not whether you played perfectly.',
       };
     }
+    const specificRef = c.badBeats >= 1
+      ? 'a bad beat'
+      : c.bigLosses >= 1
+      ? 'a big pot loss'
+      : c.bluffs >= 1
+      ? 'a bluff that got called'
+      : 'a tough hand';
     return {
-      text: 'Something at the table recently felt bad. How much is it still on you?',
-      sub: '1 = basically over it · 5 = still really on me',
-      low: 'over it',
+      text: `You logged ${specificRef}. How much is it still affecting you at the table right now?`,
+      sub: '1 = basically moved on · 5 = still really on me',
+      low: 'moved on',
       high: 'still on me',
-      info: 'Pick 1 if you’ve mostly moved on. Pick 5 if it’s still in your head between hands. No need to describe what happened—just the aftertaste.',
+      info: 'Pick 1 if you\'ve mostly reset. Pick 5 if that hand is still in your head between decisions. You\'re rating the emotional aftertaste, not whether you played it correctly.',
     };
   }
   if (theme === 'accum') {
@@ -500,7 +507,7 @@ function pickFrustration(c, theme) {
         sub: '1 = light · 5 = very heavy',
         low: 'light',
         high: 'heavy',
-        info: 'This is about emotional weight carried in from before this session—tiredness, dread, frustration—not about today’s chip count alone.',
+        info: 'This is about emotional weight carried in from before this session—tiredness, dread, frustration—not about today\'s chip count alone.',
       };
     }
     return {
@@ -517,7 +524,7 @@ function pickFrustration(c, theme) {
       sub: '1 = calmer · 5 = more upset or tense',
       low: 'calmer',
       high: 'more upset',
-      info: 'Your last check was a snapshot of mood. You don’t need to remember numbers—just whether you feel better, the same, or worse than that snapshot.',
+      info: 'Your last check was a snapshot of mood. You don\'t need to remember numbers—just whether you feel better, the same, or worse than that snapshot.',
     };
   }
   if (theme === 'baseline' && c.pre?.stress === 'high') {
@@ -532,11 +539,11 @@ function pickFrustration(c, theme) {
   if (theme === 'sheet') {
     if (c.isUp) {
       return {
-        text: 'While you’re ahead, how worked up or “wired” do you feel?',
+        text: 'While you\'re ahead, how worked up or "wired" do you feel?',
         sub: '1 = calm · 5 = very wired or excited',
         low: 'calm',
         high: 'wired',
-        info: 'Winning can feel great but also buzzy or overconfident. High isn’t “bad”—it’s just more energy than calm if that matches you.',
+        info: 'Winning can feel great but also buzzy or overconfident. High isn\'t "bad"—it\'s just more energy than calm if that matches you.',
       };
     }
     return {
@@ -544,7 +551,7 @@ function pickFrustration(c, theme) {
       sub: '1 = not very · 5 = very upset',
       low: 'not very',
       high: 'very upset',
-      info: 'Separate from strategy: this is the emotional sting of being down, not whether you “should” be okay with it.',
+      info: 'Separate from strategy: this is the emotional sting of being down, not whether you "should" be okay with it.',
     };
   }
   if (theme === 'broad') {
@@ -558,10 +565,10 @@ function pickChasing(c, theme) {
     if (c.isUp) {
       return {
         text: 'How badly do you want to push and win even more right now?',
-        sub: '1 = I’m fine building slow · 5 = I want to pile it on now',
+        sub: '1 = I\'m fine building slow · 5 = I want to pile it on now',
         low: 'slow',
         high: 'pile on',
-        info: 'Pressing every edge can mean bigger pots, thinner value, or playing too many hands because you’re hot. This checks that urge, not normal aggression.',
+        info: 'Pressing every edge can mean bigger pots, thinner value, or playing too many hands because you\'re hot. This checks that urge, not normal aggression.',
       };
     }
     return {
@@ -569,7 +576,7 @@ function pickChasing(c, theme) {
       sub: '1 = I can wait · 5 = I need it now',
       low: 'can wait',
       high: 'need it now',
-      info: 'This is the “get it back” feeling—even when you know patience is smarter. Big scores here often mean you’re forcing action to fix the number on the sheet.',
+      info: 'This is the "get it back" feeling—even when you know patience is smarter. Big scores here often mean you\'re forcing action to fix the number on the sheet.',
     };
   }
   if (theme === 'lastCheck') {
@@ -578,12 +585,12 @@ function pickChasing(c, theme) {
       sub: '1 = less urgent · 5 = more urgent',
       low: 'less',
       high: 'more',
-      info: 'Last time, urgency may have shown up in your answers. This asks only whether that “need to move the result” feeling is stronger or weaker now.',
+      info: 'Last time, urgency may have shown up in your answers. This asks only whether that "need to move the result" feeling is stronger or weaker now.',
     };
   }
   if (theme === 'accum') {
     return {
-      text: 'After rough recent results, how badly do you want today to “fix” that?',
+      text: 'After rough recent results, how badly do you want today to "fix" that?',
       sub: '1 = not much · 5 = very badly',
       low: 'not much',
       high: 'very badly',
@@ -661,6 +668,9 @@ export default function TiltCheckScreen({
   activeSession,
   accumulatedTilt,
   tiltProfileReport,
+  freeCheckUsed,
+  hasPremium,
+  openPaywall,
 }) {
   const [step, setStep] = useState(0);
   const [infoOpen, setInfoOpen] = useState(false);
@@ -671,10 +681,17 @@ export default function TiltCheckScreen({
     chasingLosses: null,
     selfCriticism: null,
   });
+  const paywallRedirected = useRef(false);
 
   const questions = buildQuestions(activeSession, accumulatedTilt, tiltProfileReport);
   const q = questions[step];
   const progress = (step / questions.length) * 100;
+
+  useEffect(() => {
+    if (paywallRedirected.current || hasPremium || !freeCheckUsed) return;
+    paywallRedirected.current = true;
+    openPaywall?.('tilt_check_limit', 'session');
+  }, [hasPremium, freeCheckUsed, openPaywall]);
 
   useEffect(() => {
     setInfoOpen(false);

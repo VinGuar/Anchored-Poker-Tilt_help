@@ -130,7 +130,7 @@ export function tiltCheckAnswerLabel(raw) {
   return `${Math.round(v)}/5`;
 }
 
-/** True when the answer maps to the “elevated / high concern” band on the internal 1–10 model. */
+/** True when the answer maps to the "elevated / high concern" band on the internal 1–10 model. */
 export function tiltCheckAnswerIsElevated(raw) {
   return tiltCheckAnswerToTen(raw) >= 6;
 }
@@ -250,9 +250,19 @@ function classifyTiltType({ rushingDecisions, playingLooser, frustrationLevel, c
     s.mistake = 2;
   }
 
-  const [topType, topScore] = Object.entries(s).sort((a, b) => b[1] - a[1])[0];
+  // Pre-session state influences which tilt type is most likely active
+  if (session.preSessionState?.energy === 'low') {
+    s.running_bad += 3;
+    s.mistake     += 2;
+  }
+  if (session.preSessionState?.stress === 'high') {
+    s.desperation += 2;
+    s.running_bad += 2;
+  }
+
+  // Tilt profile gives a stronger prior — the player already told us how they typically tilt
   if (tiltProfile?.personaKey && s[tiltProfile.personaKey] !== undefined) {
-    s[tiltProfile.personaKey] += 2;
+    s[tiltProfile.personaKey] += 3;
   }
   const [biasedType, biasedScore] = Object.entries(s).sort((a, b) => b[1] - a[1])[0];
   if (biasedScore < 5) return null;
@@ -431,14 +441,22 @@ export function runTiltCheck({
     status = 'tilt';
     if (tiltType?.type === 'desperation') {
       recommendation = 'Pause for 10 minutes. Before any pot, name your preflop reason out loud: position, range, or exploit. No reason, no chips.';
+    } else if (tiltType?.type === 'injustice') {
+      recommendation = 'Step away for 10 minutes. Variance is running your decisions. Come back and remind yourself: correct play is the product, not the outcome.';
+    } else if (tiltType?.type === 'revenge') {
+      recommendation = "Take a short reset. Your only target is decision quality — evaluate ranges and board texture, not who you're against.";
+    } else if (tiltType?.type === 'winners') {
+      recommendation = 'Stay with your normal process. Before putting money in preflop, take one extra beat and confirm it matches your standard entry criteria.';
+    } else if (tiltType?.type === 'boredom') {
+      recommendation = "Take a 5-minute break. On return, ask before every pot: 'Is there a clear reason to play this hand, or am I just looking for action?'";
+    } else if (tiltType?.type === 'mistake') {
+      recommendation = "Get up for 5 minutes. Write down the one fix from that hand, then walk away from it. The mistake is costing you twice if you carry it forward.";
+    } else if (tiltType?.type === 'entitlement') {
+      recommendation = "Stop and breathe. Skill doesn't guarantee short-run outcomes. Play the next orbit with the same discipline you'd bring to your toughest game.";
+    } else if (tiltType?.type === 'running_bad') {
+      recommendation = "Take 10 minutes off. Downswings compound when you force it. Come back and start fresh — the run ends hand by hand, not by pressing.";
     } else if (postflopProcessLeak) {
       recommendation = 'Pause for 10 minutes. On postflop streets, force a 3-step check before acting: range advantage, pot odds, and plan for later streets.';
-    } else if (tiltType?.type === 'revenge') {
-      recommendation = "Take a short reset. Your only target is decision quality: evaluate ranges and board texture, not who you're against.";
-    } else if (tiltType?.type === 'winners') {
-      recommendation = 'Stay with your normal process. Before putting money in preflop, take one extra beat and confirm it matches your standard criteria.';
-    } else if (tiltType?.type === 'boredom') {
-      recommendation = "Take a 5-minute attention reset. On return, ask: 'Am I entering this pot for a clear reason or just for action?'";
     } else if (fr >= 8) {
       recommendation = 'Take 10 minutes off-table. Resume only when breathing and pace are controlled, then use a full preflop checklist for the next orbit.';
     } else {
@@ -446,13 +464,27 @@ export function runTiltCheck({
     }
   } else if (score >= 35) {
     status = 'warning';
-    recommendation = tiltType?.type === 'desperation'
-      ? 'Warning signs of chasing. For the next orbit, use a strict preflop pause: decide only after confirming position, range, and intent.'
-      : postflopProcessLeak
-      ? 'You are speeding up postflop. For the next orbit, pause and confirm: range interaction, price, and your plan versus a raise.'
-      : tiltType?.type === 'winners'
-      ? 'Your standards are drifting. Re-anchor to your baseline routine: one breath, one reason, then act.'
-      : 'You are slightly off baseline. Slow down one step before committing chips and confirm the decision matches your normal process.';
+    if (tiltType?.type === 'desperation') {
+      recommendation = 'Warning signs of chasing. For the next orbit, use a strict preflop pause: decide only after confirming position, range, and intent.';
+    } else if (tiltType?.type === 'injustice') {
+      recommendation = "Bad luck is in your head. For the next orbit, focus only on decision quality — whether each play was correct, not what the cards did.";
+    } else if (tiltType?.type === 'revenge') {
+      recommendation = "Someone's getting to you. Redirect attention: pick a positional goal for the orbit, not a player target.";
+    } else if (tiltType?.type === 'boredom') {
+      recommendation = "Boredom is nudging you toward thin spots. For the next orbit, fold anything that needs a justification beyond a standard read or position.";
+    } else if (tiltType?.type === 'mistake') {
+      recommendation = "Still holding onto an earlier mistake. Name the fix, give it 10 seconds, then release it. Next hand starts clean.";
+    } else if (tiltType?.type === 'entitlement') {
+      recommendation = "Expectations are bleeding into decisions. Play the next orbit like it's a fresh start — no score to settle, just process.";
+    } else if (tiltType?.type === 'running_bad') {
+      recommendation = "Accumulated pressure is showing. Tighten your range one step this orbit and stay focused on what's directly in front of you.";
+    } else if (tiltType?.type === 'winners') {
+      recommendation = 'Your standards are drifting. Re-anchor to your baseline routine: one breath, one reason, then act.';
+    } else if (postflopProcessLeak) {
+      recommendation = 'You are speeding up postflop. For the next orbit, pause and confirm: range interaction, price, and your plan versus a raise.';
+    } else {
+      recommendation = 'You are slightly off baseline. Slow down one step before committing chips and confirm the decision matches your normal process.';
+    }
   } else {
     status = 'clear';
     // Contextual clear: acknowledge risk factors when they're present but managed

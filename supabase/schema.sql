@@ -28,6 +28,9 @@ create table if not exists public.user_settings (
 alter table public.user_settings
   add column if not exists pre_session_note text not null default '';
 
+alter table public.user_settings
+  add column if not exists free_check_last_used date;
+
 create table if not exists public.sessions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -47,6 +50,9 @@ create table if not exists public.sessions (
 
 alter table public.sessions
   add column if not exists status text not null default 'current';
+
+alter table public.sessions
+  add column if not exists coach_analysis jsonb;
 alter table public.sessions
   add column if not exists buy_ins_count integer not null default 0;
 
@@ -199,6 +205,37 @@ drop policy if exists "Users can delete own sessions" on public.sessions;
 create policy "Users can delete own sessions"
   on public.sessions for delete
   using (auth.uid() = user_id);
+
+create table if not exists public.tilt_profiles (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  profile_input jsonb,
+  profile_report jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.tilt_profiles enable row level security;
+
+drop policy if exists "Users can view own tilt profile" on public.tilt_profiles;
+create policy "Users can view own tilt profile"
+  on public.tilt_profiles for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "Users can insert own tilt profile" on public.tilt_profiles;
+create policy "Users can insert own tilt profile"
+  on public.tilt_profiles for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Users can update own tilt profile" on public.tilt_profiles;
+create policy "Users can update own tilt profile"
+  on public.tilt_profiles for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop trigger if exists set_tilt_profiles_updated_at on public.tilt_profiles;
+create trigger set_tilt_profiles_updated_at
+  before update on public.tilt_profiles
+  for each row execute procedure public.set_updated_at();
 
 -- Automatically create profile + default settings after signup.
 create or replace function public.handle_new_user()

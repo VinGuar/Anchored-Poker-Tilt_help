@@ -53,6 +53,7 @@ function toDomain(row) {
     events: row.events ?? [],
     checks: row.checks ?? [],
     sessionNote: row.session_note ?? '',
+    coachAnalysis: row.coach_analysis ?? null,
     status: row.status === 'old' ? 'old' : row.status === 'current' ? 'current' : derivedStatus,
   };
 }
@@ -71,6 +72,7 @@ function toRow(session) {
     events: sanitizeEvents(session?.events),
     checks: sanitizeChecks(session?.checks),
     session_note: note || null,
+    coach_analysis: session.coachAnalysis ?? null,
     status,
   };
 }

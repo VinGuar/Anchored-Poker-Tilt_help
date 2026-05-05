@@ -1,6 +1,6 @@
 import BrandLogo from '../components/BrandLogo';
 
-export default function HomeScreen({ sessions, startSession, patterns, accumulatedTilt, hasPremium, navigate, tiltProfileReport, user }) {
+export default function HomeScreen({ sessions, startSession, accumulatedTilt, hasPremium, navigate, tiltProfileReport, user, openPaywall }) {
   const totalSessions = sessions.length;
   // Tilt rate = % of sessions where tilt was detected at least once.
   // Per-check would shrink the rate just for checking in more often — wrong signal.
@@ -15,11 +15,21 @@ export default function HomeScreen({ sessions, startSession, patterns, accumulat
   const pressureState = accumulatedTilt?.level === 'high' ? 'high' : accumulatedTilt?.level === 'elevated' ? 'elevated' : 'clear';
   return (
     <div className="screen">
-      <div className="header" style={{ justifyContent: 'center' }}>
+      <div className="header">
         <div className="logo-row">
           <BrandLogo />
           <span className="header-title">Anchored</span>
         </div>
+        {user?.id && (
+          <button
+            className="btn btn-ghost btn-inline"
+            onClick={() => navigate('profile')}
+            aria-label="Settings"
+            style={{ fontSize: '20px', padding: '4px 8px' }}
+          >
+            ⚙
+          </button>
+        )}
       </div>
 
       {!user?.id && (
@@ -83,22 +93,6 @@ export default function HomeScreen({ sessions, startSession, patterns, accumulat
         </div>
       )}
 
-      {patterns.length > 0 && (
-        <>
-          <p className="section-title" style={{ marginTop: '4px' }}>Coaching Priorities</p>
-          {patterns.map((p, i) => (
-            <div key={i} className="pattern-card">
-              <div className="pattern-type">
-                {p.type === 'trigger' ? '⚡ Trigger'
-                 : p.type === 'duration' ? '⏱ Duration'
-                 : '📉 Loss Streak'}
-              </div>
-              <div className="pattern-desc">{p.description}</div>
-              <div className="pattern-insight" style={{ marginTop: '5px' }}>→ {p.insight}</div>
-            </div>
-          ))}
-        </>
-      )}
 
       {totalSessions === 0 && (
         <div className="welcome-card">

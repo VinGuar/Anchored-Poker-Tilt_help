@@ -14,6 +14,9 @@ You can log sessions and notes so over time you see your patterns, not just toni
 
 If you play seriously and want something direct instead of another motivational poster, this is for you.
 
+Auto-renewable subscription terms (Apple Standard EULA):
+https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+
 **Keywords**
 
 poker,tilt,mental game,bankroll,focus
@@ -272,6 +275,8 @@ Use this checklist in App Store Connect to reduce first-review rejection risk.
 - Keywords: poker, tilt, mental game, session tracker, coaching
 - Support URL: point to your support page or support email contact page
 - Marketing URL: optional, but recommended
+- Include this exact Terms line in App Description for subscription compliance:
+  - `Terms of Use (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/`
 
 ### Screenshots
 

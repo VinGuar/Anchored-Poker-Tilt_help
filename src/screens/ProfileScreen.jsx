@@ -15,6 +15,7 @@ export default function ProfileScreen({
 }) {
   const [email, setEmail] = useState(user?.email || '');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
@@ -42,12 +43,17 @@ export default function ProfileScreen({
 
   const savePassword = async (e) => {
     e.preventDefault();
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
     setBusy(true);
     setError('');
     setInfo('');
     try {
       await updateAuthPassword(password);
       setPassword('');
+      setConfirmPassword('');
       setInfo('Password updated successfully.');
     } catch (err) {
       setError(err.message || 'Could not update password.');
@@ -165,6 +171,15 @@ export default function ProfileScreen({
             minLength={6}
             required
           />
+          <input
+            className="auth-input"
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="Confirm new password"
+            minLength={6}
+            required
+          />
           <button className="btn btn-secondary" disabled={busy}>Update Password</button>
         </form>
       </div>
@@ -179,7 +194,7 @@ export default function ProfileScreen({
         </button>
         <div className="legal-copy" style={{ marginTop: '10px' }}>
           Review our <a href={APP_META.legal.privacyUrl} target="_blank" rel="noreferrer">Privacy Policy</a> and{' '}
-          <a href={APP_META.legal.termsUrl} target="_blank" rel="noreferrer">Terms</a>.
+          <a href={APP_META.legal.termsUrl} target="_blank" rel="noreferrer">Terms (EULA)</a>.
         </div>
       </div>
 
@@ -188,6 +203,14 @@ export default function ProfileScreen({
 
       <div className="actions-stack">
         <button className="btn btn-ghost" onClick={onSignOut}>Sign Out</button>
+        <div className="legal-copy" style={{ marginTop: '12px' }}>
+          By using Anchored, you agree to our{' '}
+          <a href={APP_META.legal.termsUrl} target="_blank" rel="noreferrer">Terms (EULA)</a>
+          {' '}and{' '}
+          <a href={APP_META.legal.privacyUrl} target="_blank" rel="noreferrer">Privacy Policy</a>.
+          {' '}Need help?{' '}
+          <a href={`mailto:${APP_META.supportEmail}`}>Contact support</a>.
+        </div>
       </div>
 
       {showDeleteModal && (

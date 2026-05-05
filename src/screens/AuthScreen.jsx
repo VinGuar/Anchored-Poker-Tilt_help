@@ -10,11 +10,23 @@ const HCAPTCHA_SITEKEY = (import.meta.env.DEV || Capacitor.isNativePlatform())
   : (import.meta.env.VITE_HCAPTCHA_SITEKEY || '');
 
 const isNative = Capacitor.isNativePlatform();
+const REMEMBERED_EMAIL_KEY = 'anchored_remembered_email';
 
-export default function AuthScreen({ title = 'Log In', subtitle = '', onBack }) {
+function getSavedEmail() {
+  try { return localStorage.getItem(REMEMBERED_EMAIL_KEY) || ''; } catch { return ''; }
+}
+function setSavedEmail(email) {
+  try { localStorage.setItem(REMEMBERED_EMAIL_KEY, email); } catch {}
+}
+function clearSavedEmail() {
+  try { localStorage.removeItem(REMEMBERED_EMAIL_KEY); } catch {}
+}
+
+export default function AuthScreen({ title = 'Log In', subtitle = '' }) {
   const [mode, setMode] = useState('signin');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => getSavedEmail());
   const [password, setPassword] = useState('');
+  const [rememberEmail, setRememberEmail] = useState(() => Boolean(getSavedEmail()));
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [busy, setBusy] = useState(false);
@@ -49,6 +61,8 @@ export default function AuthScreen({ title = 'Log In', subtitle = '', onBack }) 
         }
       } else {
         await signInWithEmail(pending.email, pending.password, captchaToken);
+        if (rememberEmail) setSavedEmail(pending.email);
+        else clearSavedEmail();
       }
     } catch (err) {
       const msg = String(err?.message || '').toLowerCase();
@@ -129,41 +143,43 @@ export default function AuthScreen({ title = 'Log In', subtitle = '', onBack }) 
           </button>
         )}
 
-        {!isNative && (
-          <button
-            className="btn btn-secondary"
-            style={{ marginBottom: '12px' }}
-            onClick={continueWithGoogle}
-            disabled={busy}
-          >
-            Continue with Google
-          </button>
-        )}
-
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
           <div style={{ flex: 1, height: '1px', background: 'var(--border-soft)' }} />
           <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>or</span>
           <div style={{ flex: 1, height: '1px', background: 'var(--border-soft)' }} />
         </div>
 
-        <form className="auth-form" onSubmit={submit}>
+        <form className="auth-form" onSubmit={submit} autoComplete="on">
           <input
             className="auth-input"
             type="email"
             placeholder="Email"
             required
+            autoComplete="username"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
           <input
             className="auth-input"
             type="password"
-            placeholder="Password (min 6 chars)"
+            placeholder="Password"
             required
             minLength={6}
+            autoComplete={isSignUp ? 'new-password' : 'current-password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
+          {!isSignUp && (
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-secondary)', cursor: 'pointer', marginBottom: '4px' }}>
+              <input
+                type="checkbox"
+                checked={rememberEmail}
+                onChange={(e) => setRememberEmail(e.target.checked)}
+                style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+              />
+              Remember my email
+            </label>
+          )}
           {error && <div className="auth-error">{error}</div>}
           {info && <div className="auth-info">{info}</div>}
           <button className="btn btn-primary" disabled={busy}>
@@ -185,18 +201,13 @@ export default function AuthScreen({ title = 'Log In', subtitle = '', onBack }) 
         <button
           className="btn btn-ghost"
           style={{ marginTop: '8px' }}
-          onClick={() => { setMode(isSignUp ? 'signin' : 'signup'); setError(''); setInfo(''); }}
+          onClick={() => { setMode(isSignUp ? 'signin' : 'signup'); setError(''); setInfo(''); setPassword(''); }}
         >
           {isSignUp ? 'Have an account? Log in' : 'Need an account? Sign up'}
         </button>
-        {typeof onBack === 'function' && (
-          <button className="btn btn-ghost" style={{ marginTop: '8px' }} onClick={onBack}>
-            Continue browsing
-          </button>
-        )}
         <div className="legal-copy">
           {isSignUp ? 'By creating an account, you agree to our ' : 'By continuing, you agree to our '}
-          <a href={APP_META.legal.termsUrl} target="_blank" rel="noreferrer">Terms</a>
+          <a href={APP_META.legal.termsUrl} target="_blank" rel="noreferrer">Terms (EULA)</a>
           {' '}and{' '}
           <a href={APP_META.legal.privacyUrl} target="_blank" rel="noreferrer">Privacy Policy</a>.
           {' '}Need help?{' '}

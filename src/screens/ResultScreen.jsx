@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getGameQuality, tiltCheckAnswerIsElevated, tiltCheckAnswerLabel } from '../utils/tiltDetection';
+import { getGameQuality } from '../utils/tiltDetection';
 
 const STATUS_CONFIG = {
   clear:   { icon: '✅', label: 'CLEAR',         color: 'var(--green)',  recClass: 'clear' },
@@ -13,7 +13,7 @@ const TILT_TYPE_COLOR = {
   hate_losing: 'var(--red)',
 };
 
-export default function ResultScreen({ lastResult, continueSession, requestEndSession }) {
+export default function ResultScreen({ lastResult, continueSession, requestEndSession, hasPremium, onUnlockPremium }) {
   const [resetOffset, setResetOffset] = useState(0);
   const [resetExpanded, setResetExpanded] = useState(false);
 
@@ -22,7 +22,6 @@ export default function ResultScreen({ lastResult, continueSession, requestEndSe
   const cfg   = STATUS_CONFIG[lastResult.status];
   const gq    = lastResult.gameQuality ?? getGameQuality(lastResult.score);
   const tt    = lastResult.tiltType ?? null;
-  const { answers } = lastResult;
   const mentalResetLines =
     lastResult.status !== 'clear'
       ? (lastResult.tiltType?.mentalReset?.length
@@ -114,30 +113,6 @@ export default function ResultScreen({ lastResult, continueSession, requestEndSe
             <strong>Next best action:</strong> {lastResult.recommendation}
           </div>
 
-          {/* Your answers (moved below reset) */}
-          <div className="card" style={{ marginBottom: '10px' }}>
-            <div className="card-title">Your Answers</div>
-            {[
-              { label: 'Rushed decisions', value: tiltCheckAnswerLabel(answers.rushingDecisions), bad: tiltCheckAnswerIsElevated(answers.rushingDecisions) },
-              { label: 'Standards drift', value: tiltCheckAnswerLabel(answers.playingLooser), bad: tiltCheckAnswerIsElevated(answers.playingLooser) },
-              { label: 'Frustration level', value: tiltCheckAnswerLabel(answers.frustrationLevel), bad: tiltCheckAnswerIsElevated(answers.frustrationLevel) },
-              ...(answers.chasingLosses !== null && answers.chasingLosses !== undefined
-                ? [{ label: 'Urgency to win / get unstuck', value: tiltCheckAnswerLabel(answers.chasingLosses), bad: tiltCheckAnswerIsElevated(answers.chasingLosses) }]
-                : []),
-              ...(answers.selfCriticism !== null && answers.selfCriticism !== undefined
-                ? [{ label: 'Replaying a decision', value: tiltCheckAnswerLabel(answers.selfCriticism), bad: tiltCheckAnswerIsElevated(answers.selfCriticism) }]
-                : []),
-            ].map((a, i) => (
-              <div key={i} className="trigger-item">
-                <div className="trigger-dot" style={{ background: a.bad ? cfg.color : 'var(--green)' }} />
-                <span style={{ flex: 1, color: 'var(--text-secondary)', fontSize: '13px' }}>{a.label}</span>
-                <span style={{ fontWeight: '700', fontSize: '13px', color: a.bad ? cfg.color : 'var(--green)' }}>
-                  {a.value}
-                </span>
-              </div>
-            ))}
-          </div>
-
           {/* Contributing factors */}
           {lastResult.triggers.length > 0 && (
             <div className="card" style={{ marginBottom: '10px' }}>
@@ -177,30 +152,24 @@ export default function ResultScreen({ lastResult, continueSession, requestEndSe
                 </div>
               </div>
 
-              <div style={{ borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
-                {tt.longTermTip && (
-                  <div style={{
-                    padding: '10px 14px',
-                    background: 'var(--surface-2)',
-                    borderRadius: '8px',
-                    fontSize: '13px',
-                    lineHeight: '1.5',
-                    borderLeft: '3px solid rgba(129,140,248,0.35)',
-                    color: 'var(--text-secondary)',
-                  }}>
-                    <span style={{ color: 'var(--purple)', fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      Long-term fix →{' '}
-                    </span>
-                    {tt.longTermTip}
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         )}
       </div>
       </div>
 
+      {!hasPremium && (
+        <div className="content-wrap" style={{ marginBottom: '8px' }}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: 'var(--radius)', padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+              That was your 1 free check-in. Upgrade for unlimited checks per session.
+            </div>
+            <button onClick={onUnlockPremium} style={{ flexShrink: 0, padding: '6px 12px', fontSize: '12px', fontWeight: '700', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'var(--accent, #6366f1)', color: '#fff' }}>
+              Unlock
+            </button>
+          </div>
+        </div>
+      )}
       <div className="result-bottom-nav">
         <button className="btn btn-primary" onClick={continueSession}>Back to Session</button>
         <button className="btn btn-ghost" onClick={requestEndSession}>End Session</button>

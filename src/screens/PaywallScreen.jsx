@@ -1,14 +1,41 @@
 import { useState } from 'react';
 import { APP_META } from '../config/appMeta';
 
+/** Matches what the app actually gates behind premium (see App.jsx, Insights, Session, History, Tilt profile). */
 const FEATURES = [
-  { icon: '🧠', label: 'Tilt Profile', desc: 'Maps your 8 tilt types and shows which triggers hit you hardest based on your answers.' },
-  { icon: '⚡', label: 'Live Detection', desc: 'Real-time check-ins during sessions catch emotional drift before it costs you chips.' },
-  { icon: '🔄', label: 'Mental Reset', desc: 'Scripted resets built from your persona — not generic advice anyone could Google.' },
-  { icon: '🎯', label: 'Interventions', desc: 'Mid-session prompts that fire when your logged patterns show early tilt signs.' },
-  { icon: '📈', label: 'Drift Alerts', desc: 'Tracks your tilt trajectory across multiple sessions, not just the current one.' },
-  { icon: '🃏', label: 'Session Coach', desc: 'Pre- and post-session coaching tailored to your tilt persona and recent history.' },
+  {
+    icon: '♾️',
+    label: 'Unlimited check-ins',
+    desc: 'Free tier saves one tilt check per calendar day. Premium removes that cap so you can run a full check whenever you need it during a session.',
+  },
+  {
+    icon: '🧠',
+    label: 'Full tilt profile',
+    desc: 'Unlock the complete report: persona blend, trigger weights, risk band, and tailored copy—not just the home-screen summary.',
+  },
+  {
+    icon: '🔗',
+    label: 'Pattern insights',
+    desc: 'In Insights, see correlations across your history between logged events, check-in outcomes, and recurring tilt patterns.',
+  },
+  {
+    icon: '📈',
+    label: 'Session trend chart',
+    desc: 'Plot your weighted mental-game score over time so you can spot drift between sessions, not only in the moment.',
+  },
+  {
+    icon: '📝',
+    label: 'Post-session coach',
+    desc: 'After you end a session, get a short written recap from your checks, events, profile, and recent history (saved in History).',
+  },
+  {
+    icon: '⚡',
+    label: 'Live session coaching',
+    desc: 'During play: see your last check status, rotate persona mental-reset lines after check-ins, and full pre-session coach cues on the session hub.',
+  },
 ];
+
+const TRIAL_DAYS = 7;
 
 const PLAN_OPTIONS = [
   {
@@ -25,7 +52,7 @@ const PLAN_OPTIONS = [
     price: '$49.99',
     period: '/year',
     sub: '$4.17 / month',
-    badge: 'Save 40%',
+    badge: 'Best value',
   },
 ];
 
@@ -39,14 +66,18 @@ export default function PaywallScreen({
   onSelectPackage,
   billingBusy = false,
 }) {
-  const [expandedFeature, setExpandedFeature] = useState('Tilt Profile');
+  const [expandedFeature, setExpandedFeature] = useState(FEATURES[0].label);
 
   const sourceLabel =
     source === 'tilt_profile_report'
-      ? 'Unlock your full Tilt Profile report'
+      ? 'Open the full tilt profile write-up, mechanics, and retention guidance tied to your answers.'
+      : source === 'tilt_check_limit'
+        ? 'You already used your free saved check today. Premium removes the daily limit for in-session check-ins.'
       : source === 'tilt_check'
-        ? 'Unlock live tilt detection'
-        : 'Unlock premium coaching';
+        ? 'Premium unlocks unlimited tilt checks per session and the live coaching tools below.'
+      : source === 'pattern'
+        ? 'Pattern recognition in Insights needs Premium—it connects your events, check-ins, and outcomes across sessions.'
+      : 'Unlimited check-ins, full profile, Insights patterns & trends, and session coaching from your own data.';
 
   const toggleFeature = (label) => {
     setExpandedFeature((prev) => (prev === label ? null : label));
@@ -62,8 +93,9 @@ export default function PaywallScreen({
       </div>
 
       <div className="card paywall-main">
-        <div className="paywall-hero-title">Unlock all premium coaching</div>
-        <div className="paywall-hero-sub">{sourceLabel}. Built for your play style.</div>
+        <div className="paywall-hero-title">Anchored Premium</div>
+        <div className="paywall-hero-sub">{sourceLabel}</div>
+        <div className="paywall-hero-tagline">Everything below is included—no surprise add-ons.</div>
 
         <div className="paywall-feature-grid">
           {FEATURES.map((f) => {
@@ -118,19 +150,23 @@ export default function PaywallScreen({
           onClick={() => onUpgrade?.(selectedPackageId)}
           disabled={billingBusy}
         >
-          {billingBusy ? 'Processing...' : 'Start'}
+          {billingBusy ? 'Processing...' : `Start ${TRIAL_DAYS}-Day Free Trial`}
         </button>
+
+        <div className="legal-copy" style={{ textAlign: 'center', marginTop: '14px', marginBottom: '8px', lineHeight: 1.5 }}>
+          {TRIAL_DAYS} days free, then {PLAN_OPTIONS.find(p => p.id === selectedPackageId)?.price}{PLAN_OPTIONS.find(p => p.id === selectedPackageId)?.period}. Cancel anytime.
+        </div>
 
         <div className="paywall-legal-row">
           <button className="paywall-link-btn" onClick={onRestore} disabled={billingBusy}>Restore</button>
-          <a className="paywall-link-btn" href={APP_META.legal.termsUrl} target="_blank" rel="noreferrer">Terms</a>
+          <a className="paywall-link-btn" href={APP_META.legal.termsUrl} target="_blank" rel="noreferrer">Terms (EULA)</a>
           <a className="paywall-link-btn" href={APP_META.legal.privacyUrl} target="_blank" rel="noreferrer">Privacy</a>
         </div>
       </div>
 
       {!canSkip && (
         <div className="legal-copy paywall-footnote">
-          Cancel anytime. Free mode remains available for basic logging.
+          Free plan available for basic session logging.
         </div>
       )}
     </div>

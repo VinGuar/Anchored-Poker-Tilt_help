@@ -4,6 +4,7 @@ import { Purchases, LOG_LEVEL } from '@revenuecat/purchases-capacitor';
 const ENTITLEMENT_ID = 'anchored_pro';
 const OFFERING_ID = 'default';
 const PACKAGE_IDS = ['monthly', 'yearly'];
+const OFFERING_RETRY_DELAYS_MS = [0, 1200, 2200];
 
 let configured = false;
 
@@ -54,9 +55,8 @@ export async function purchasePremium(preferredPackageId = '') {
     throw new Error('RevenueCat is not configured on this device.');
   }
 
-  const offeringsResult = await Purchases.getOfferings();
-  const currentOffering = offeringsResult?.current || offeringsResult?.all?.[OFFERING_ID];
-  const packages = currentOffering?.availablePackages || [];
+  const offeringsResult = await getOfferingsWithRetry();
+  const packages = extractAvailablePackages(offeringsResult);
   const wanted = String(preferredPackageId || '').trim().toLowerCase();
   const validWanted = PACKAGE_IDS.includes(wanted) ? wanted : '';
   const pkg = validWanted
@@ -65,13 +65,41 @@ export async function purchasePremium(preferredPackageId = '') {
     : packages[0];
 
   if (!pkg) {
-    throw new Error('No subscription package is available. Check your RevenueCat offering setup.');
+    throw new Error('No subscription package is available. Check RevenueCat offering setup and App Store Connect product IDs.');
   }
 
   const { customerInfo } = await Purchases.purchasePackage({
     aPackage: pkg,
   });
   return Boolean(customerInfo?.entitlements?.active?.[ENTITLEMENT_ID]);
+}
+
+async function getOfferingsWithRetry() {
+  let lastOfferings = null;
+  for (const delay of OFFERING_RETRY_DELAYS_MS) {
+    if (delay > 0) {
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+    const offerings = await Purchases.getOfferings();
+    lastOfferings = offerings;
+    if (extractAvailablePackages(offerings).length > 0) {
+      return offerings;
+    }
+  }
+  return lastOfferings;
+}
+
+function extractAvailablePackages(offeringsResult) {
+  const current = offeringsResult?.current?.availablePackages || [];
+  if (current.length > 0) return current;
+
+  const fallbackOffering = offeringsResult?.all?.[OFFERING_ID]?.availablePackages || [];
+  if (fallbackOffering.length > 0) return fallbackOffering;
+
+  const allOfferings = offeringsResult?.all || {};
+  return Object.values(allOfferings)
+    .flatMap((offering) => offering?.availablePackages || [])
+    .filter(Boolean);
 }
 
 export async function restorePremium() {

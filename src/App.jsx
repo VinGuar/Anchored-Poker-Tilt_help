@@ -1,11 +1,14 @@
 import { useEffect, useState, useRef } from 'react';
 import { App as CapApp } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
-import { runTiltCheck, analyzePatterns, calculateAccumulatedTilt } from './utils/tiltDetection';
+import { runTiltCheck, calculateAccumulatedTilt } from './utils/tiltDetection';
+import { hasUsedFreeCheckToday, mergeActiveIntoSessionsList } from './utils/dailyCheckQuota';
 import { getCurrentSession, getCurrentUser, onAuthStateChange, signOut, closeBrowser } from './services/authService';
 import { createSession, deleteSessionById, fetchMySessions, updateSession } from './services/sessionsService';
 import { getMySettings, upsertMySettings } from './services/settingsService';
 import { getMonetizationState, updateMonetizationState } from './services/monetizationService';
+import { generateCoachAnalysis } from './utils/coachAnalysis';
+import { fetchTiltProfile, saveTiltProfile as saveTiltProfileToDb } from './services/tiltProfileService';
 import {
   getSubscriptionManagementUrl,
   hasPremiumEntitlement,
@@ -33,6 +36,7 @@ import ProfileScreen from './screens/ProfileScreen';
 import PaywallScreen from './screens/PaywallScreen';
 import TiltProfileScreen from './screens/TiltProfileScreen';
 import TiltProfileReportScreen from './screens/TiltProfileReportScreen';
+import PostSessionScreen from './screens/PostSessionScreen';
 
 const SCREEN_STORAGE_KEY = 'anchored_screen';
 /** If set, user had a current session last visit — used when screen key is missing/'home'. */
@@ -51,7 +55,7 @@ const RESTORABLE_SCREENS = new Set([
   'tiltprofile-edit',
   'tiltprofile-report',
 ]);
-const SCREENS_NO_PERSIST = new Set(['auth', 'paywall', 'tiltcheck', 'result', 'endsession']);
+const SCREENS_NO_PERSIST = new Set(['auth', 'paywall', 'tiltcheck', 'result', 'endsession', 'postsession']);
 
 function readStoredScreen() {
   try {
@@ -112,10 +116,13 @@ export default function App() {
   const [paywallReturnScreen, setPaywallReturnScreen] = useState('home');
   const [selectedPackageId, setSelectedPackageId] = useState('monthly');
   const [billingBusy, setBillingBusy] = useState(false);
+  const [lastEndedSession, setLastEndedSession] = useState(null);
   /** After fetchMySessions settles; avoids redirecting to tilt profile before we know activeSession. */
   const [sessionsBootstrapped, setSessionsBootstrapped] = useState(false);
   /** Skip duplicate workspace fetch when this matches `user.id` (already hydrated). */
   const lastHydratedUserIdRef = useRef(null);
+  /** Prevents confirmStartSession from firing twice before the first DB insert returns. */
+  const sessionCreatingRef = useRef(false);
 
   useEffect(() => {
     let mounted = true;
@@ -326,6 +333,7 @@ export default function App() {
       setHasPremium(false);
       setTiltProfileInput(null);
       setTiltProfileReport(null);
+      setLastEndedSession(null);
       setSessionsBootstrapped(false);
       try {
         sessionStorage.removeItem(SCREEN_STORAGE_KEY);
@@ -342,22 +350,44 @@ export default function App() {
 
     (async () => {
       try {
-        const [fetched, settings] = await Promise.all([
+        const [fetched, settings, tiltProfileResult] = await Promise.all([
           fetchMySessions(),
           getMySettings().catch(() => null),
+          fetchTiltProfile().catch(() => 'error'),
         ]);
         if (cancelled) return;
 
-        const current = fetched.find((s) => s.status === 'current' || !s.endTime) || null;
+        if (tiltProfileResult === 'error') {
+          notify('Could not load your tilt profile. Check your connection and try again.');
+        }
+
+        // Find all sessions still marked 'current' in DB
+        const allCurrent = fetched.filter((s) => s.status === 'current' || !s.endTime);
+        // Keep only the most recently started one; close the rest silently (ghost-session cleanup)
+        const current = allCurrent.length > 0
+          ? allCurrent.reduce((a, b) => (a.startTime >= b.startTime ? a : b))
+          : null;
+        if (allCurrent.length > 1) {
+          allCurrent
+            .filter(s => s.id !== current?.id)
+            .forEach(stale => {
+              const closed = { ...stale, endTime: stale.startTime + 60000, status: 'old' };
+              updateSession(closed).catch(() => {});
+            });
+        }
+
         const monetization = getMonetizationState(user.id);
         const storedPreferred = readStoredScreenWithLiveHint();
         let nextScreen = computeScreenAfterHydrate(current, storedPreferred);
         if (nextScreen === 'auth') nextScreen = 'home';
 
+        const dbInput = tiltProfileResult !== 'error' ? (tiltProfileResult?.tiltProfileInput ?? null) : null;
+        const dbReport = tiltProfileResult !== 'error' ? (tiltProfileResult?.tiltProfileReport ?? null) : null;
+
         setSessions(fetched);
         setActiveSession(current);
-        setTiltProfileInput(monetization.tiltProfileInput || null);
-        setTiltProfileReport(monetization.tiltProfileReport || null);
+        setTiltProfileInput(dbInput);
+        setTiltProfileReport(dbReport);
         setLastResult(null);
         setScreen(nextScreen);
         setSessionsBootstrapped(true);
@@ -416,9 +446,17 @@ export default function App() {
   }, [user?.id, screen, tiltProfileInput, tiltProfileReport]);
 
   useEffect(() => {
-    const onVisible = () => {
+    if (!user?.id) return;
+    const onVisible = async () => {
       if (document.visibilityState !== 'visible') return;
-      refreshSubscriptionStatus();
+      // Silent background refresh — never show a notification
+      try {
+        const enabled = await initRevenueCat(user.id);
+        if (!enabled) return;
+        const premium = await refreshPremiumStatus();
+        updateMonetizationState(user.id, { premium });
+        setHasPremium(Boolean(premium));
+      } catch (_) {}
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => {
@@ -544,6 +582,9 @@ export default function App() {
 
   const confirmStartSession = (preSessionState) => {
     if (!requireAuth('Create an account to start a session.')) return;
+    if (activeSession) { setScreen('session'); return; }
+    if (sessionCreatingRef.current) return;
+    sessionCreatingRef.current = true;
     const draft = {
       startTime: Date.now(),
       endTime: null,
@@ -562,6 +603,9 @@ export default function App() {
       })
       .catch(() => {
         notify('Could not start session. Check connection and try again.');
+      })
+      .finally(() => {
+        sessionCreatingRef.current = false;
       });
   };
 
@@ -633,8 +677,8 @@ export default function App() {
   };
 
   const handleCheckComplete = (answers) => {
-    if (!hasPremium) {
-      openPaywall('tilt_check', 'session');
+    if (freeCheckUsed) {
+      openPaywall('tilt_check_limit', 'session');
       return;
     }
     if (!requireAuth('Create an account to save check-ins.')) return;
@@ -653,25 +697,45 @@ export default function App() {
 
   const continueSession = () => setScreen('session');
   const requestEndSession = () => setScreen('endsession');
+  const sessionsForDailyQuota = mergeActiveIntoSessionsList(sessions, activeSession);
+  const freeCheckUsed = !hasPremium && hasUsedFreeCheckToday(sessionsForDailyQuota);
+  const hasAnyCheckData = sessions.some(s => s.checks.length > 0);
+
   const requestTiltCheck = () => {
-    if (!hasPremium) {
-      openPaywall('tilt_check', 'session');
+    if (freeCheckUsed) {
+      openPaywall('tilt_check_limit', 'session');
       return;
     }
     setScreen('tiltcheck');
   };
 
-  const endSession = (sessionNote = '') => {
+  const endSession = async (sessionNote = '') => {
     if (!requireAuth('Create an account to save session notes and history.')) return;
+    if (!activeSession) return;
     const completed = { ...activeSession, endTime: Date.now(), status: 'old', sessionNote: sessionNote.trim() };
-    updateSession(completed)
-      .then((saved) => {
-        setSessions(prev => prev.map(s => (s.id === saved.id ? saved : s)));
-      })
-      .catch(() => notify('Session ended locally, but cloud save failed. Retry from Insights.'));
+    const coachAnalysis = hasPremium
+      ? generateCoachAnalysis(completed, tiltProfileReport, sessions)
+      : null;
+    const completedWithAnalysis = { ...completed, coachAnalysis };
+    setLastEndedSession(completedWithAnalysis);
     setActiveSession(null);
     setLastResult(null);
-    setScreen('insights');
+    setScreen('postsession');
+    try {
+      const saved = await updateSession(completedWithAnalysis);
+      setSessions(prev => prev.map(s => (s.id === saved.id ? saved : s)));
+      setLastEndedSession(saved);
+    } catch {
+      // DB update failed — force a fresh fetch so local state matches DB truth
+      notify('Session save failed. Your data may reload on next visit. Check your connection.');
+      fetchMySessions()
+        .then(fresh => {
+          setSessions(fresh);
+          const stillCurrent = fresh.find(s => s.status === 'current' || !s.endTime) || null;
+          setActiveSession(stillCurrent);
+        })
+        .catch(() => {});
+    }
   };
 
   const updateSessionNote = (sessionId, note) => {
@@ -724,17 +788,24 @@ export default function App() {
     });
   };
 
-  const saveTiltProfile = (input, report) => {
+  const saveTiltProfile = async (input, report) => {
     if (!requireAuth('Create an account to save your tilt profile.')) return;
-    const next = updateMonetizationState(user.id, {
-      tiltProfileInput: input,
-      tiltProfileReport: report,
-    });
-    setTiltProfileInput(next.tiltProfileInput || null);
-    setTiltProfileReport(next.tiltProfileReport || null);
+    setTiltProfileInput(input);
+    setTiltProfileReport(report);
+    try {
+      await saveTiltProfileToDb(input, report);
+    } catch {
+      notify('Tilt profile saved locally but could not sync to cloud. Check your connection.');
+    }
   };
 
   const handleSignOut = async () => {
+    // Force-close any session that is still 'current' in DB before signing out.
+    // This is the safety net that prevents the ghost-session-on-login bug.
+    if (activeSession) {
+      const completed = { ...activeSession, endTime: Date.now(), status: 'old' };
+      await updateSession(completed).catch(() => {});
+    }
     await logoutRevenueCat().catch(() => {});
     await signOut();
     lastHydratedUserIdRef.current = null;
@@ -745,7 +816,6 @@ export default function App() {
     setScreen('home');
   };
 
-  const patterns        = analyzePatterns(sessions);
   const accumulatedTilt = calculateAccumulatedTilt(sessions);
 
   const sharedProps = {
@@ -765,7 +835,6 @@ export default function App() {
     continueSession,
     requestEndSession,
     endSession,
-    patterns,
     accumulatedTilt,
     preSessionNote,
     updatePreSessionNote,
@@ -773,6 +842,8 @@ export default function App() {
     updateTheme,
     user,
     hasPremium,
+    freeCheckUsed,
+    hasAnyCheckData,
     tiltProfileInput,
     tiltProfileReport,
     openPaywall,
@@ -829,6 +900,9 @@ export default function App() {
                 preSessionNote={preSessionNote}
                 updatePreSessionNote={updatePreSessionNote}
                 startCheckIn={startCheckIn}
+                tiltProfileReport={tiltProfileReport}
+                hasPremium={hasPremium}
+                openPaywall={openPaywall}
               />
         )}
         {screen === 'tiltprofile' && (
@@ -871,8 +945,8 @@ export default function App() {
             canSkip={paywallContext !== 'tilt_profile_report'}
           />
         )}
-        {screen === 'tiltcheck'  && (hasPremium ? <TiltCheckScreen {...sharedProps} /> : <PaywallScreen source="tilt_check" onUpgrade={activatePremium} selectedPackageId={selectedPackageId} onSelectPackage={setSelectedPackageId} onRestore={handleRestorePurchases} billingBusy={billingBusy} onBack={() => setScreen('session')} canSkip />)}
-        {screen === 'result'     && (hasPremium ? <ResultScreen {...sharedProps} /> : <PaywallScreen source="tilt_check" onUpgrade={activatePremium} selectedPackageId={selectedPackageId} onSelectPackage={setSelectedPackageId} onRestore={handleRestorePurchases} billingBusy={billingBusy} onBack={() => setScreen('session')} canSkip />)}
+        {screen === 'tiltcheck'  && <TiltCheckScreen {...sharedProps} />}
+        {screen === 'result'     && <ResultScreen {...sharedProps} hasPremium={hasPremium} onUnlockPremium={() => openPaywall('tilt_check', 'session')} />}
         {screen === 'endsession' && (
           <EndSessionScreen
             onSaveAndEnd={(note) => endSession(note)}
@@ -881,11 +955,7 @@ export default function App() {
           />
         )}
         {screen === 'insights'   && (
-          <InsightsScreen
-            {...sharedProps}
-            updateSessionNote={updateSessionNote}
-            deleteSession={deleteSession}
-          />
+          <InsightsScreen {...sharedProps} />
         )}
         {screen === 'learn'      && <LearnScreen      {...sharedProps} />}
         {screen === 'profile'    && user?.id && <ProfileScreen {...sharedProps} manageSubscriptionUrl={getSubscriptionManagementUrl()} />}
@@ -896,7 +966,15 @@ export default function App() {
             onBack={() => setScreen('home')}
           />
         )}
-        {screen === 'history'    && <HistoryScreen    {...sharedProps} />}
+        {screen === 'history'    && <HistoryScreen {...sharedProps} updateSessionNote={updateSessionNote} deleteSession={deleteSession} />}
+        {screen === 'postsession' && (
+          <PostSessionScreen
+            lastEndedSession={lastEndedSession}
+            hasPremium={hasPremium}
+            navigate={navigate}
+            openPaywall={openPaywall}
+          />
+        )}
         {screen === 'stats'      && <StatsScreen      {...sharedProps} />}
       </div>
 

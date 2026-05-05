@@ -38,6 +38,7 @@ export default function SessionScreen({
   requestEndSession,
   accumulatedTilt,
   hasPremium,
+  freeCheckUsed,
   tiltProfileReport,
 }) {
   const timer = useTimer(activeSession.startTime);
@@ -338,10 +339,19 @@ export default function SessionScreen({
       {/* Persistent check CTA */}
       <div className="session-check-dock">
         <button
-          className={`btn session-check-btn ${passive ? 'btn-danger' : stage.cls === 'warning' ? 'btn-warning' : 'btn-primary'}`}
+          className={`btn session-check-btn ${freeCheckUsed && !hasPremium ? 'session-check-btn-upsell' : ''} ${passive ? 'btn-danger' : stage.cls === 'warning' ? 'btn-warning' : 'btn-primary'}`}
           onClick={requestTiltCheck}
         >
-          {!hasPremium ? 'Unlock Tilt Check' : passive ? 'Immediate Intervention Check' : stage.cta}
+          {hasPremium ? (
+            passive ? 'Immediate Intervention Check' : stage.cta
+          ) : freeCheckUsed ? (
+            <>
+              <span className="session-check-btn-title">Upgrade to Premium</span>
+              <span className="session-check-btn-sub">Keep check-ins available when tilt spikes</span>
+            </>
+          ) : (
+            '1 Free Tilt Check'
+          )}
         </button>
       </div>
 
