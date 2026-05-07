@@ -88,6 +88,7 @@ export default function AuthScreen({ title = 'Log In', subtitle = '' }) {
   };
   const handleCaptchaExpire = () => {
     pendingAuthRef.current = null;
+    setBusy(false);
     captchaRef.current?.resetCaptcha();
   };
 
@@ -156,11 +157,13 @@ export default function AuthScreen({ title = 'Log In', subtitle = '' }) {
           </button>
         )}
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-          <div style={{ flex: 1, height: '1px', background: 'var(--border-soft)' }} />
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>or</span>
-          <div style={{ flex: 1, height: '1px', background: 'var(--border-soft)' }} />
-        </div>
+        {isNative && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+            <div style={{ flex: 1, height: '1px', background: 'var(--border-soft)' }} />
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>or</span>
+            <div style={{ flex: 1, height: '1px', background: 'var(--border-soft)' }} />
+          </div>
+        )}
 
         <form className="auth-form" onSubmit={submit} autoComplete="on">
           <input
@@ -177,11 +180,16 @@ export default function AuthScreen({ title = 'Log In', subtitle = '' }) {
             type="password"
             placeholder="Password"
             required
-            minLength={6}
+            minLength={isSignUp ? 8 : 6}
             autoComplete={isSignUp ? 'new-password' : 'current-password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
+          {isSignUp && (
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '-4px', marginBottom: '4px' }}>
+              Minimum 8 characters
+            </div>
+          )}
           {!isSignUp && (
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-secondary)', cursor: 'pointer', marginBottom: '4px' }}>
               <input

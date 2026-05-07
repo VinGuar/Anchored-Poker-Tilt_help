@@ -11,7 +11,7 @@ const FEATURES = [
   {
     icon: '🧠',
     label: 'Full tilt profile',
-    desc: 'Unlock the complete report: persona blend, trigger weights, risk band, and tailored copy—not just the home-screen summary.',
+    desc: 'Unlock the complete report: persona blend, trigger weights, risk band, and tailored copy. Not just the home-screen summary.',
   },
   {
     icon: '🔗',
@@ -76,7 +76,7 @@ export default function PaywallScreen({
       : source === 'tilt_check'
         ? 'Premium unlocks unlimited tilt checks per session and the live coaching tools below.'
       : source === 'pattern'
-        ? 'Pattern recognition in Insights needs Premium—it connects your events, check-ins, and outcomes across sessions.'
+        ? 'Pattern recognition in Insights needs Premium. It connects your events, check-ins, and outcomes across sessions.'
       : 'Unlimited check-ins, full profile, Insights patterns & trends, and session coaching from your own data.';
 
   const toggleFeature = (label) => {
@@ -87,7 +87,7 @@ export default function PaywallScreen({
     <div className="screen">
       <div className="header paywall-header">
         <span className="header-title">Premium</span>
-        <button className="paywall-close" onClick={onBack} aria-label="Close paywall" title="Close">
+        <button className="paywall-close" onClick={onBack} aria-label="Close paywall" title="Close" disabled={billingBusy}>
           ×
         </button>
       </div>
@@ -95,7 +95,7 @@ export default function PaywallScreen({
       <div className="card paywall-main">
         <div className="paywall-hero-title">Anchored Premium</div>
         <div className="paywall-hero-sub">{sourceLabel}</div>
-        <div className="paywall-hero-tagline">Everything below is included—no surprise add-ons.</div>
+        <div className="paywall-hero-tagline">Everything below is included. No surprise add-ons.</div>
 
         <div className="paywall-feature-grid">
           {FEATURES.map((f) => {

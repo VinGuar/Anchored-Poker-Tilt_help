@@ -12,6 +12,7 @@ export default function ProfileScreen({
   manageSubscriptionUrl,
   refreshSubscriptionStatus,
   billingBusy = false,
+  toggleDevPremium,
 }) {
   const [email, setEmail] = useState(user?.email || '');
   const [password, setPassword] = useState('');
@@ -97,6 +98,9 @@ export default function ProfileScreen({
         <div className="profile-email">Current login: {user?.email}</div>
       </div>
 
+      {error && <div className="content-wrap"><div className="auth-error">{error}</div></div>}
+      {info && <div className="content-wrap"><div className="auth-info">{info}</div></div>}
+
       <div className="card">
         <div className="card-title">Email</div>
         <form className="auth-form" onSubmit={saveEmail}>
@@ -159,6 +163,21 @@ export default function ProfileScreen({
         )}
       </div>
 
+      {import.meta.env.DEV && typeof toggleDevPremium === 'function' && (
+        <div className="card dev-settings-card">
+          <div className="card-title">Developer</div>
+          <div className="note-text" style={{ marginBottom: '10px' }}>
+            Local dev only: simulate Premium on or off for screenshots and QA. Does not change App Store or RevenueCat subscriptions.
+          </div>
+          <div className="note-text" style={{ marginBottom: '10px', fontWeight: 700 }}>
+            Simulated state: <strong>{hasPremium ? 'Premium' : 'Free'}</strong>
+          </div>
+          <button type="button" className="btn btn-secondary" onClick={toggleDevPremium}>
+            {hasPremium ? 'Turn off simulated Premium' : 'Turn on simulated Premium'}
+          </button>
+        </div>
+      )}
+
       <div className="card">
         <div className="card-title">Password</div>
         <form className="auth-form" onSubmit={savePassword}>
@@ -168,16 +187,19 @@ export default function ProfileScreen({
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="New password"
-            minLength={6}
+            minLength={8}
             required
           />
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '-4px', marginBottom: '4px' }}>
+            Minimum 8 characters
+          </div>
           <input
             className="auth-input"
             type="password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             placeholder="Confirm new password"
-            minLength={6}
+            minLength={8}
             required
           />
           <button className="btn btn-secondary" disabled={busy}>Update Password</button>
@@ -197,9 +219,6 @@ export default function ProfileScreen({
           <a href={APP_META.legal.termsUrl} target="_blank" rel="noreferrer">Terms (EULA)</a>.
         </div>
       </div>
-
-      {error && <div className="content-wrap"><div className="auth-error">{error}</div></div>}
-      {info && <div className="content-wrap"><div className="auth-info">{info}</div></div>}
 
       <div className="actions-stack">
         <button className="btn btn-ghost" onClick={onSignOut}>Sign Out</button>

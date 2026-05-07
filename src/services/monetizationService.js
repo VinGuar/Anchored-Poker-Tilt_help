@@ -317,19 +317,19 @@ export function buildTiltProfileReport(input) {
 
   const recommendations = [
     desperationUrgency >= 7
-      ? 'Set a hard stop-loss before you start and never override it — your urgency to recover is your biggest risk.'
+      ? 'Set a hard stop-loss before you start and never override it. Your urgency to recover is your biggest risk.'
       : 'Define a clear stop condition before your first hand so the decision is already made.',
     selfCriticalness >= 7
       ? 'After any mistake, give yourself 10 seconds to note the fix, then hard-reset. Do not carry it forward.'
       : 'Use a short reset phrase after high-friction hands to clear the emotional slate.',
     actionNeed >= 7
       ? 'During card-dead stretches, set a folding target: commit to folding X more hands before widening your range.'
-      : 'Use slow stretches as active patience practice — every fold is a decision made correctly.',
+      : 'Use slow stretches as active patience practice. Every fold is a decision made correctly.',
     topTriggers.length > 0
       ? 'Pre-commit your response to your top trigger so emotion does not choose for you when it hits.'
       : 'Define one trigger-response rule before each session.',
     injusticeSensitivity >= 7
-      ? 'After a bad beat, note the decision quality — not the result. Correct decisions are the only metric that compounds.'
+      ? 'After a bad beat, note the decision quality, not the result. Correct decisions are the only metric that compounds.'
       : 'Keep a short mental note of your best decisions each session. Results are noise; decisions are signal.',
     egoInvolvement >= 7
       ? 'When you feel the urge to prove a point at the table, ask: am I playing this hand against the board or against a person?'
@@ -365,11 +365,11 @@ export function buildTiltProfileReport(input) {
     topTriggers,
     recommendations,
     strengths: [
-      selfCriticalness <= 4 ? 'You move past mistakes quickly — a real mental edge under pressure.' : 'Your self-awareness after mistakes is strong; the next step is shortening how long they linger.',
+      selfCriticalness <= 4 ? "You move past mistakes quickly. That's a real mental edge under pressure." : 'Your self-awareness after mistakes is strong; the next step is shortening how long they linger.',
       actionNeed <= 4 ? 'Your patience during slow sessions is well above average.' : 'Developing patience during card-dead stretches is your highest-leverage mental skill.',
     ],
     blindSpots: [
-      desperationUrgency >= 7 ? 'Escalation urgency when stuck is your biggest leak — it bypasses your normal process.' : 'Recovery urgency is present but manageable; watch for it in late-session spots.',
+      desperationUrgency >= 7 ? 'Escalation urgency when stuck is your biggest leak. It bypasses your normal process.' : 'Recovery urgency is present but manageable; watch for it in late-session spots.',
       skillExpectation >= 7 ? 'High skill expectations are an edge long-term but can trigger entitlement in short downswings.' : 'Your expectations are calibrated well; stay grounded when variance runs cold.',
     ],
     premiumRetentionValue: [

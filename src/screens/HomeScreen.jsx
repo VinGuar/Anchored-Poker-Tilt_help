@@ -1,13 +1,31 @@
 import BrandLogo from '../components/BrandLogo';
 
+function sessionWeightedScore(session) {
+  const checks = [...(session.checks || [])].sort((a, b) => a.timestamp - b.timestamp);
+  if (checks.length === 0) return 0;
+
+  let weightedSum = 0;
+  let weightTotal = 0;
+  checks.forEach((c, i) => {
+    const w = i + 1;
+    weightedSum += Number(c.result?.score ?? 0) * w;
+    weightTotal += w;
+  });
+
+  return Math.round(weightedSum / weightTotal);
+}
+
+function sessionStatus(session) {
+  const score = sessionWeightedScore(session);
+  if (score >= 70) return 'tilt';
+  if (score >= 35) return 'warning';
+  return 'clear';
+}
+
 export default function HomeScreen({ sessions, startSession, accumulatedTilt, hasPremium, navigate, tiltProfileReport, user, openPaywall }) {
   const totalSessions = sessions.length;
-  // Tilt rate = % of sessions where tilt was detected at least once.
-  // Per-check would shrink the rate just for checking in more often — wrong signal.
-  const sessionsWithChecks = sessions.filter(s => s.checks.length > 0);
-  const tiltedSessions = sessionsWithChecks.filter(s =>
-    s.checks.some(c => c.result.status === 'tilt')
-  );
+  const sessionsWithChecks = sessions.filter(s => (s.checks || []).length > 0);
+  const tiltedSessions = sessionsWithChecks.filter(s => sessionStatus(s) === 'tilt');
   const tiltRate =
     sessionsWithChecks.length > 0
       ? Math.round((tiltedSessions.length / sessionsWithChecks.length) * 100)

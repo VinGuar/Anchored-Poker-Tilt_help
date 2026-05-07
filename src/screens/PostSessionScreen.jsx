@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+
 function sessionWeightedScore(session) {
   const checks = [...(session.checks || [])].sort((a, b) => a.timestamp - b.timestamp);
   if (checks.length === 0) return null;
@@ -17,7 +19,11 @@ const STATUS_LABEL = { tilt: 'Tilt Detected', warning: 'Warning', clear: 'Clear'
 const STATUS_COLOR = { tilt: 'var(--red)', warning: 'var(--yellow)', clear: 'var(--green)' };
 
 export default function PostSessionScreen({ lastEndedSession, hasPremium, navigate, openPaywall }) {
-  if (!lastEndedSession) { navigate('insights'); return null; }
+  useEffect(() => {
+    if (!lastEndedSession) navigate('insights');
+  }, []);
+
+  if (!lastEndedSession) return null;
 
   const score  = sessionWeightedScore(lastEndedSession);
   const status = sessionStatus(score);
@@ -73,6 +79,15 @@ export default function PostSessionScreen({ lastEndedSession, hasPremium, naviga
                 {line}
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {hasPremium && lines.length === 0 && (
+        <div className="card" style={{ marginBottom: '12px' }}>
+          <div className="card-title" style={{ marginBottom: '6px' }}>Coach Analysis</div>
+          <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+            Analysis could not be generated for this session. This can happen when check-in data is missing. Try adding a check-in during your next session.
           </div>
         </div>
       )}

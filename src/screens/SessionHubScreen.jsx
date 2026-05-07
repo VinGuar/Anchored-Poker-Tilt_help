@@ -203,7 +203,7 @@ function diversificationPool(ctx) {
     },
     {
       topic: 'skill_outcome_split',
-      text: 'After any big pot, say one sentence that separates result from line taken—then move.',
+      text: 'After any big pot, say one sentence that separates the result from the line you took. Then move on.',
     },
     {
       topic: 'skill_physical_reset',

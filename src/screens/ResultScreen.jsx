@@ -143,7 +143,7 @@ export default function ResultScreen({ lastResult, continueSession, requestEndSe
                   ⚡ {tt.name}
                   {tt.tagline && (
                     <span style={{ color: 'var(--text-secondary)', fontWeight: '600', marginLeft: '6px', textTransform: 'none', fontSize: '11px' }}>
-                      — {tt.tagline}
+                      · {tt.tagline}
                     </span>
                   )}
                 </div>

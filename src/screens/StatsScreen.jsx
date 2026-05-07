@@ -22,12 +22,12 @@ export default function StatsScreen({ sessions, accumulatedTilt }) {
   }
 
   const allChecks  = sessions.flatMap(s => s.checks);
-  const warnChecks = allChecks.filter(c => c.result.status === 'warning').length;
+  const warnChecks = allChecks.filter(c => c.result?.status === 'warning').length;
 
   // Tilt rate = % of sessions with at least one tilt detected (not % of individual checks)
   const sessionsWithChecks = sessions.filter(s => s.checks.length > 0);
   const tiltedSessions     = sessionsWithChecks.filter(s =>
-    s.checks.some(c => c.result.status === 'tilt')
+    s.checks.some(c => c.result?.status === 'tilt')
   );
   const tiltRate = sessionsWithChecks.length > 0
     ? Math.round((tiltedSessions.length / sessionsWithChecks.length) * 100)
@@ -36,7 +36,7 @@ export default function StatsScreen({ sessions, accumulatedTilt }) {
   // Recent trend: last 5 sessions with checks
   const recentWithChecks = sessions.filter(s => s.checks.length > 0).slice(0, 5);
   const recentTilted     = recentWithChecks.filter(s =>
-    s.checks.some(c => c.result.status === 'tilt')
+    s.checks.some(c => c.result?.status === 'tilt')
   );
   const recentTiltRate = recentWithChecks.length > 0
     ? Math.round((recentTilted.length / recentWithChecks.length) * 100)
@@ -57,7 +57,7 @@ export default function StatsScreen({ sessions, accumulatedTilt }) {
   // Top triggers across all checks
   const triggerCounts = {};
   allChecks.forEach(c => {
-    c.result.triggers.forEach(t => {
+    (c.result?.triggers || []).forEach(t => {
       triggerCounts[t] = (triggerCounts[t] || 0) + 1;
     });
   });
@@ -143,9 +143,9 @@ export default function StatsScreen({ sessions, accumulatedTilt }) {
                 <div style={{ fontSize: '14px', fontWeight: '700' }}>Tilt rate (recent)</div>
                 <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
                   {recentTiltRate > tiltRate
-                    ? '↑ Getting worse — check your patterns'
+                    ? '↑ Getting worse. Check your patterns.'
                     : recentTiltRate < tiltRate
-                    ? '↓ Improving — keep it up'
+                    ? '↓ Improving. Keep it up.'
                     : '→ Holding steady'}
                 </div>
               </div>

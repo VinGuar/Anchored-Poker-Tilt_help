@@ -9,9 +9,9 @@ export async function fetchTiltProfile() {
     .from('tilt_profiles')
     .select('profile_input, profile_report')
     .eq('user_id', user.id)
-    .single();
+    .maybeSingle();
 
-  if (error && error.code !== 'PGRST116') throw error;
+  if (error) throw error;
   if (!data) return null;
 
   return {

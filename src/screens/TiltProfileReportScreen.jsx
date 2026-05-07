@@ -102,7 +102,7 @@ const TRIGGER_DETAILS = {
   running_bad: {
     why: "Accumulated pressure from rough sessions lowers emotional buffer before new variance hits.",
     watch: "Starting sessions already irritable, smaller triggers causing bigger reactions.",
-    reset: "Acknowledge carryover pressure before you sit. Give yourself less rope — tighter stop-loss, earlier check-in.",
+    reset: "Acknowledge carryover pressure before you sit. Give yourself less rope: tighter stop-loss, earlier check-in.",
   },
   winners: {
     why: "When ahead, overconfidence loosens discipline and leaks profits back quietly.",

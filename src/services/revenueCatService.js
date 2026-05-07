@@ -3,8 +3,8 @@ import { Purchases, LOG_LEVEL } from '@revenuecat/purchases-capacitor';
 
 const ENTITLEMENT_ID = 'anchored_pro';
 const OFFERING_ID = 'default';
-const STORE_MONTHLY_ID = (import.meta.env.VITE_RC_PRODUCT_MONTHLY || 'monthly_sub').trim().toLowerCase();
-const STORE_YEARLY_ID = (import.meta.env.VITE_RC_PRODUCT_YEARLY || 'yearly_sub').trim().toLowerCase();
+const ENV_MONTHLY_FALLBACK_ID = String(import.meta.env.VITE_RC_PRODUCT_MONTHLY || '').trim();
+const ENV_YEARLY_FALLBACK_ID = String(import.meta.env.VITE_RC_PRODUCT_YEARLY || '').trim();
 
 const OFFERING_RETRY_DELAYS_MS = [0, 1200, 2200];
 
@@ -102,41 +102,56 @@ function extractAvailablePackages(offeringsResult) {
     .filter(Boolean);
 }
 
+function packageIncludesAnyTerm(item, terms) {
+  const identifier = String(item?.identifier || '').toLowerCase();
+  const productIdentifier = String(item?.storeProduct?.productIdentifier || '').toLowerCase();
+  return terms.some((term) => identifier.includes(term) || productIdentifier.includes(term));
+}
+
+function normalizeId(value) {
+  return String(value || '').trim().toLowerCase().replace(/^\$/, '');
+}
+
+function packageMatchesId(item, target) {
+  const wanted = normalizeId(target);
+  if (!wanted) return false;
+  const identifier = normalizeId(item?.identifier);
+  const productIdentifier = normalizeId(item?.storeProduct?.productIdentifier);
+  return identifier === wanted || productIdentifier === wanted;
+}
+
 /**
- * Maps paywall plan keys (monthly | yearly) to packages. Supports legacy product IDs
- * `monthly`/`yearly` and current IDs like `monthly_sub`/`yearly_sub`, plus RevenueCat
- * identifiers like `$rc_monthly` / `$rc_annual`.
+ * Maps paywall plan keys (monthly | yearly) to RevenueCat packages from `getOfferings()`.
+ * Prefers packageType + $rc identifiers and can use optional env fallback product IDs.
  */
-export function pickPackageForPlan(packages, planKey) {
+export function pickPackageForPlan(packages, planKey, fallbackIds = {}) {
   const list = packages || [];
   if (list.length === 0) return null;
 
   const key = planKey === 'yearly' ? 'yearly' : 'monthly';
-  const storeId = key === 'yearly' ? STORE_YEARLY_ID : STORE_MONTHLY_ID;
-  const legacyStoreId = key === 'yearly' ? 'yearly' : 'monthly';
 
-  const candidates = [
-    storeId,
-    legacyStoreId,
-    `$${storeId}`,
-    `$${legacyStoreId}`,
-  ].filter(Boolean);
+  // Most stable selection path: RevenueCat package type, independent of store product IDs.
+  const desiredPackageType = key === 'yearly' ? 'annual' : 'monthly';
+  const byType = list.find((item) => String(item?.packageType || '').toLowerCase() === desiredPackageType);
+  if (byType) return byType;
 
-  for (const cand of candidates) {
-    const c = String(cand).toLowerCase();
-    const hit = list.find((item) => {
-      const pid = String(item?.storeProduct?.productIdentifier || '').toLowerCase();
-      const bid = String(item?.identifier || '').toLowerCase();
-      const bidNorm = bid.replace(/^\$/, '');
-      return pid === c || bid === c || bidNorm === c.replace(/^\$/, '');
-    });
-    if (hit) return hit;
+  const exactPackageId = key === 'yearly' ? '$rc_annual' : '$rc_monthly';
+  const exact = list.find((item) => String(item?.identifier || '').toLowerCase() === exactPackageId);
+  if (exact) return exact;
+
+  const envFallback =
+    key === 'yearly'
+      ? (fallbackIds.yearly ?? ENV_YEARLY_FALLBACK_ID)
+      : (fallbackIds.monthly ?? ENV_MONTHLY_FALLBACK_ID);
+  if (envFallback) {
+    const envMatched = list.find((item) => packageMatchesId(item, envFallback));
+    if (envMatched) return envMatched;
   }
 
-  const fuzzy =
-    key === 'yearly'
-      ? list.find((item) => /annual|yearly|year/.test(String(item?.identifier || '').toLowerCase()))
-      : list.find((item) => /monthly/.test(String(item?.identifier || '').toLowerCase()));
+  const fuzzyTerms = key === 'yearly'
+    ? ['annual', 'yearly', 'year']
+    : ['monthly', 'month'];
+  const fuzzy = list.find((item) => packageIncludesAnyTerm(item, fuzzyTerms));
   if (fuzzy) return fuzzy;
 
   // Last resort: any package (better than failing if StoreKit shape changes)

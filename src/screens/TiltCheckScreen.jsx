@@ -10,7 +10,7 @@ const PERSONA_CHECK5 = {
     sub: '1 = no, it\'s just cards · 5 = yes, it feels aimed at me',
     low: 'not personal',
     high: 'very personal',
-    info: 'Sometimes losses feel random; other times they feel like the deck is picking on you. That feeling can change how aggressively you play. You\'re not judging whether a hand was played perfectly—just how "personal" the luck feels in your gut.',
+    info: 'Sometimes losses feel random; other times they feel like the deck is picking on you. That feeling can change how aggressively you play. You\'re not judging whether a hand was played perfectly. Just how "personal" the luck feels in your gut.',
   },
   revenge: {
     text: 'Is one person at the table stuck in your head between hands?',
@@ -24,7 +24,7 @@ const PERSONA_CHECK5 = {
     sub: '1 = not really · 5 = yes, strongly',
     low: 'no',
     high: 'yes',
-    info: 'Hope is normal. This is about a stronger feeling—that results should already be going your way because of how you\'ve played or how long you\'ve waited. That feeling can push people into bigger risks.',
+    info: 'Hope is normal. This is about a stronger feeling: that results should already be going your way because of how you\'ve played or how long you\'ve waited. That feeling can push people into bigger risks.',
   },
   desperation: {
     text: 'How badly do you need something good to happen right now?',
@@ -300,7 +300,7 @@ function broadLooser(c) {
       low: 'less',
       mid: 'same',
       high: 'more',
-      info: 'Don\'t count exact hands—just your gut vs a typical session. 1 is clearly fewer pots, 5 is clearly more; use the middle if it\'s about your usual amount.',
+      info: "Don't count exact hands, just your gut vs a typical session. 1 is clearly fewer pots, 5 is clearly more; use the middle if it's about your usual amount.",
     };
   }
   if (p === 'desperation' || p === 'running_bad') {
@@ -331,7 +331,7 @@ function broadFrustration(c) {
       sub: '1 = clear · 5 = very noisy or busy',
       low: 'clear',
       high: 'noisy',
-      info: 'Not about strategy—about mental static: replaying hands, irritation, dread, or just a busy brain that won\'t settle.',
+      info: "Not about strategy. About mental static: replaying hands, irritation, dread, or just a busy brain that won't settle.",
     };
   }
   if (p === 'revenge') {
@@ -340,7 +340,7 @@ function broadFrustration(c) {
       sub: '1 = no, it\'s just a game · 5 = yes, very personal',
       low: 'just a game',
       high: 'personal',
-      info: '"Personal" means you\'re thinking about people, slights, or fairness—not only about cards and math.',
+      info: '"Personal" means you\'re thinking about people, slights, or fairness. Not only about cards and math.',
     };
   }
   return {
@@ -348,7 +348,7 @@ function broadFrustration(c) {
     sub: '1 = calm · 5 = very upset or tense',
     low: 'calm',
     high: 'upset',
-    info: 'First gut answer is fine. Upset can mean angry, anxious, embarrassed, or wound up—any flavor of "not calm."',
+    info: 'First gut answer is fine. Upset can mean angry, anxious, embarrassed, or wound up. Any flavor of "not calm."',
   };
 }
 
@@ -386,10 +386,10 @@ function pickRushing(c, theme) {
   if (theme === 'baseline' && c.pre?.energy === 'low') {
     return {
       text: 'You said you were tired before playing. How much does that show in your speed?',
-      sub: '1 = not much · 5 = a lot—I\'m dragging or snapping',
+      sub: '1 = not much · 5 = a lot, dragging or snapping',
       low: 'not much',
       high: 'a lot',
-      info: 'Low energy can make people play slower on purpose, or the opposite—snap decisions because thinking feels hard. Either pattern counts; pick what fits.',
+      info: 'Low energy can make people play slower on purpose, or the opposite: snap decisions because thinking feels hard. Either pattern counts; pick what fits.',
     };
   }
   if (theme === 'broad') {
@@ -435,7 +435,7 @@ function pickLooser(c, theme) {
       low: 'less',
       mid: 'same',
       high: 'more',
-      info: 'Stress from past days can make us play extra hands without noticing. You don\'t need exact counts—1 is clearly fewer than your norm, 5 is clearly more; the middle is about your usual volume.',
+      info: "Stress from past days can make us play extra hands without noticing. You don't need exact counts. 1 is clearly fewer than your norm, 5 is clearly more; the middle is about your usual volume.",
     };
   }
   if (theme === 'lastCheck') {
@@ -507,7 +507,7 @@ function pickFrustration(c, theme) {
         sub: '1 = light · 5 = very heavy',
         low: 'light',
         high: 'heavy',
-        info: 'This is about emotional weight carried in from before this session—tiredness, dread, frustration—not about today\'s chip count alone.',
+        info: "This is about emotional weight carried in from before this session: tiredness, dread, frustration. Not about today's chip count alone.",
       };
     }
     return {
@@ -515,7 +515,7 @@ function pickFrustration(c, theme) {
       sub: '1 = barely · 5 = yes, a lot',
       low: 'barely',
       high: 'a lot',
-      info: 'Even a little carryover can change patience. First instinct is fine—no need to analyze past sessions in detail.',
+      info: 'Even a little carryover can change patience. First instinct is fine; no need to analyze past sessions in detail.',
     };
   }
   if (theme === 'lastCheck') {
@@ -524,7 +524,7 @@ function pickFrustration(c, theme) {
       sub: '1 = calmer · 5 = more upset or tense',
       low: 'calmer',
       high: 'more upset',
-      info: 'Your last check was a snapshot of mood. You don\'t need to remember numbers—just whether you feel better, the same, or worse than that snapshot.',
+      info: "Your last check was a snapshot of mood. You don't need to remember numbers. Just whether you feel better, the same, or worse than that snapshot.",
     };
   }
   if (theme === 'baseline' && c.pre?.stress === 'high') {
@@ -543,7 +543,7 @@ function pickFrustration(c, theme) {
         sub: '1 = calm · 5 = very wired or excited',
         low: 'calm',
         high: 'wired',
-        info: 'Winning can feel great but also buzzy or overconfident. High isn\'t "bad"—it\'s just more energy than calm if that matches you.',
+        info: 'Winning can feel great but also buzzy or overconfident. High isn\'t "bad." It\'s just more energy than calm if that matches you.',
       };
     }
     return {

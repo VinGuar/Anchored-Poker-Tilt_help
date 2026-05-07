@@ -293,9 +293,10 @@ function generateSessionSummary(session, tiltProfileReport) {
     : null;
 
   // Events
-  const badBeats = session.events.filter(e => e.type === 'bad_beat').length;
-  const bigLosses = session.events.filter(e => e.type === 'big_loss').length;
-  const bluffs = session.events.filter(e => e.type === 'bluff_failed').length;
+  const events = session.events || [];
+  const badBeats = events.filter(e => e.type === 'bad_beat').length;
+  const bigLosses = events.filter(e => e.type === 'big_loss').length;
+  const bluffs = events.filter(e => e.type === 'bluff_failed').length;
 
   // Check answer peaks
   const peakFr  = checks.length ? Math.max(...checks.map(c => tiltCheckAnswerToTen(c.answers?.frustrationLevel ?? 0))) : 0;
@@ -430,9 +431,8 @@ function fmtDate(ts) {
 }
 
 function sessionWeightedScore(session) {
-  const checks = [...session.checks].sort((a, b) => a.timestamp - b.timestamp);
+  const checks = [...(session.checks || [])].sort((a, b) => a.timestamp - b.timestamp);
   if (checks.length === 0) return 0;
-  // Linear ramp: check at index i gets weight (i+1), so later checks count more
   let weightedSum = 0, weightTotal = 0;
   checks.forEach((c, i) => {
     const w = i + 1;

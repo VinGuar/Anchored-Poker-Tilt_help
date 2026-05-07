@@ -25,8 +25,8 @@ describe('HomeScreen', () => {
 
   it('computes tilt rate from sessions with checks', () => {
     const sessions = [
-      { checks: [{ result: { status: 'tilt' } }] },
-      { checks: [{ result: { status: 'clear' } }] },
+      { checks: [{ result: { status: 'tilt', score: 80 } }] },
+      { checks: [{ result: { status: 'clear', score: 10 } }] },
     ];
     render(
       <HomeScreen

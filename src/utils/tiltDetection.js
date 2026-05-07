@@ -102,7 +102,7 @@ const TILT_PROFILES = {
     name: 'Mistake Tilt',
     tagline: 'Replaying your own errors',
     description:
-      "You made a bad play — a poor call, a poorly-timed bluff, a sizing mistake — and now it's living in your head. Self-directed frustration after your own errors is one of the most common ways one bad hand becomes three.",
+      "You made a bad play, a poor call or a poorly-timed bluff or a sizing mistake, and now it's living in your head. Self-directed frustration after your own errors is one of the most common ways one bad hand becomes three.",
     mentalReset: [
       "Name one thing I'd do differently, lock it in as a lesson, and then actually let it go.",
       "One mistake doesn't define my session. What I do next does.",
@@ -110,7 +110,7 @@ const TILT_PROFILES = {
       "Self-criticism is only useful for about 10 seconds. After that, it's just distraction.",
       "That hand is over. The next hand doesn't know it happened.",
     ],
-    longTermTip: "After sessions where you made a clear mistake, write down one concrete adjustment. The act of writing it down signals to your brain that the problem is solved — and makes it easier to move on.",
+    longTermTip: "After sessions where you made a clear mistake, write down one concrete adjustment. The act of writing it down tells your brain the problem is solved, and makes it easier to move on.",
   },
 };
 
@@ -143,8 +143,8 @@ export function calculateAccumulatedTilt(sessions) {
   let score = 0;
   completed.forEach((s, i) => {
     const weight = 1 - i * 0.15;
-    const hasTilt    = s.checks.some(c => c.result.status === 'tilt');
-    const hasWarning = !hasTilt && s.checks.some(c => c.result.status === 'warning');
+    const hasTilt    = s.checks.some(c => c.result?.status === 'tilt');
+    const hasWarning = !hasTilt && s.checks.some(c => c.result?.status === 'warning');
     const avgFr      = s.checks.length > 0
       ? s.checks.reduce((sum, c) => sum + tiltCheckAnswerToTen(c.answers?.frustrationLevel ?? 0), 0) / s.checks.length
       : 0;
@@ -444,7 +444,7 @@ export function runTiltCheck({
     } else if (tiltType?.type === 'injustice') {
       recommendation = 'Step away for 10 minutes. Variance is running your decisions. Come back and remind yourself: correct play is the product, not the outcome.';
     } else if (tiltType?.type === 'revenge') {
-      recommendation = "Take a short reset. Your only target is decision quality — evaluate ranges and board texture, not who you're against.";
+      recommendation = "Take a short reset. Your only target is decision quality. Evaluate ranges and board texture, not who you're against.";
     } else if (tiltType?.type === 'winners') {
       recommendation = 'Stay with your normal process. Before putting money in preflop, take one extra beat and confirm it matches your standard entry criteria.';
     } else if (tiltType?.type === 'boredom') {
@@ -454,7 +454,7 @@ export function runTiltCheck({
     } else if (tiltType?.type === 'entitlement') {
       recommendation = "Stop and breathe. Skill doesn't guarantee short-run outcomes. Play the next orbit with the same discipline you'd bring to your toughest game.";
     } else if (tiltType?.type === 'running_bad') {
-      recommendation = "Take 10 minutes off. Downswings compound when you force it. Come back and start fresh — the run ends hand by hand, not by pressing.";
+      recommendation = "Take 10 minutes off. Downswings compound when you force it. Come back and start fresh. The run ends hand by hand, not by pressing.";
     } else if (postflopProcessLeak) {
       recommendation = 'Pause for 10 minutes. On postflop streets, force a 3-step check before acting: range advantage, pot odds, and plan for later streets.';
     } else if (fr >= 8) {
@@ -467,7 +467,7 @@ export function runTiltCheck({
     if (tiltType?.type === 'desperation') {
       recommendation = 'Warning signs of chasing. For the next orbit, use a strict preflop pause: decide only after confirming position, range, and intent.';
     } else if (tiltType?.type === 'injustice') {
-      recommendation = "Bad luck is in your head. For the next orbit, focus only on decision quality — whether each play was correct, not what the cards did.";
+      recommendation = "Bad luck is in your head. For the next orbit, focus only on decision quality: whether each play was correct, not what the cards did.";
     } else if (tiltType?.type === 'revenge') {
       recommendation = "Someone's getting to you. Redirect attention: pick a positional goal for the orbit, not a player target.";
     } else if (tiltType?.type === 'boredom') {
@@ -475,7 +475,7 @@ export function runTiltCheck({
     } else if (tiltType?.type === 'mistake') {
       recommendation = "Still holding onto an earlier mistake. Name the fix, give it 10 seconds, then release it. Next hand starts clean.";
     } else if (tiltType?.type === 'entitlement') {
-      recommendation = "Expectations are bleeding into decisions. Play the next orbit like it's a fresh start — no score to settle, just process.";
+      recommendation = "Expectations are bleeding into decisions. Play the next orbit like it's a fresh start. No score to settle, just process.";
     } else if (tiltType?.type === 'running_bad') {
       recommendation = "Accumulated pressure is showing. Tighten your range one step this orbit and stay focused on what's directly in front of you.";
     } else if (tiltType?.type === 'winners') {
@@ -559,7 +559,7 @@ export function analyzePatterns(sessions) {
 
   // Bad beat → tilt
   const bbTilt = sessions.filter(
-    s => s.events.some(e => e.type === 'bad_beat') && s.checks.some(c => c.result.status !== 'clear')
+    s => s.events.some(e => e.type === 'bad_beat') && s.checks.some(c => c.result?.status !== 'clear')
   );
   if (bbTilt.length >= 2) {
     patterns.push({
@@ -573,7 +573,7 @@ export function analyzePatterns(sessions) {
   // Long sessions → tilt
   const longTilt = sessions.filter(s => {
     const hours = ((s.endTime || Date.now()) - s.startTime) / 3600000;
-    return hours > 3 && s.checks.some(c => c.result.status !== 'clear');
+    return hours > 3 && s.checks.some(c => c.result?.status !== 'clear');
   });
   if (longTilt.length >= 2) {
     patterns.push({
@@ -586,7 +586,7 @@ export function analyzePatterns(sessions) {
 
   // Loss streak → tilt
   const lossTilt = sessions.filter(
-    s => s.buyInsLost >= 2 && s.checks.some(c => c.result.status !== 'clear')
+    s => s.buyInsLost >= 2 && s.checks.some(c => c.result?.status !== 'clear')
   );
   if (lossTilt.length >= 2) {
     patterns.push({
@@ -599,7 +599,7 @@ export function analyzePatterns(sessions) {
 
   // Accumulated tilt pattern
   const accumTilt = sessions.filter(
-    s => s.checks.some(c => c.result.triggers?.some(t => t.includes('accumulated')))
+    s => s.checks.some(c => c.result?.triggers?.some(t => t.includes('accumulated')))
   );
   if (accumTilt.length >= 2) {
     patterns.push({
@@ -612,7 +612,7 @@ export function analyzePatterns(sessions) {
 
   // Revenge tilt pattern
   const revengeTilt = sessions.filter(
-    s => s.checks.some(c => c.result.tiltType?.type === 'revenge')
+    s => s.checks.some(c => c.result?.tiltType?.type === 'revenge')
   );
   if (revengeTilt.length >= 2) {
     patterns.push({
@@ -625,7 +625,7 @@ export function analyzePatterns(sessions) {
 
   // Winner's tilt pattern
   const winnersTilt = sessions.filter(
-    s => s.checks.some(c => c.result.tiltType?.type === 'winners')
+    s => s.checks.some(c => c.result?.tiltType?.type === 'winners')
   );
   if (winnersTilt.length >= 2) {
     patterns.push({
@@ -638,7 +638,7 @@ export function analyzePatterns(sessions) {
 
   // Mistake tilt pattern
   const mistakeTilt = sessions.filter(
-    s => s.checks.some(c => c.result.tiltType?.type === 'mistake')
+    s => s.checks.some(c => c.result?.tiltType?.type === 'mistake')
   );
   if (mistakeTilt.length >= 2) {
     patterns.push({

@@ -817,6 +817,15 @@ export default function App() {
 
   const accumulatedTilt = calculateAccumulatedTilt(sessions);
 
+  const toggleDevPremium = () => {
+    if (!import.meta.env.DEV) return;
+    setHasPremium((prev) => {
+      const next = !prev;
+      if (user?.id) updateMonetizationState(user.id, { premium: next });
+      return next;
+    });
+  };
+
   const sharedProps = {
     sessions,
     activeSession,
@@ -849,6 +858,7 @@ export default function App() {
     onSignOut: handleSignOut,
     refreshSubscriptionStatus,
     billingBusy,
+    toggleDevPremium: import.meta.env.DEV ? toggleDevPremium : undefined,
   };
 
   const appShellReady = authReady && (!user?.id || sessionsBootstrapped);
@@ -977,16 +987,6 @@ export default function App() {
       </div>
 
       <BottomNav screen={screen} navigate={navigate} hasActiveSession={!!activeSession} />
-
-      {import.meta.env.DEV && (
-        <button
-          className="dev-premium-toggle"
-          onClick={() => setHasPremium((p) => !p)}
-          title="Dev only: toggle premium"
-        >
-          {hasPremium ? '★ Premium ON' : '☆ Premium OFF'}
-        </button>
-      )}
     </div>
   );
 }
