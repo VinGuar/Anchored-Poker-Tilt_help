@@ -356,7 +356,7 @@ export default function TiltProfileReportScreen({ tiltProfileReport, hasPremium,
 
           <div className="note-block tilt-report-pricing">
             <div className="note-label">Pricing</div>
-            <div className="note-text"><strong>3-day free trial</strong> then $3.99/week or $13.99/month.</div>
+            <div className="note-text"><strong>7-day free trial</strong> then $6.99/month or $49.99/year.</div>
           </div>
           <button className="btn btn-primary tilt-report-main-cta" onClick={onUnlock}>
             Unlock full report

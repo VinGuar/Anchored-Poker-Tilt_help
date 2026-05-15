@@ -633,7 +633,7 @@ export default function InsightsScreen({ sessions, tiltProfileReport, hasPremium
               <strong>Preview:</strong> {tiltProfileReport.summary}
             </div>
             <div className="legal-copy" style={{ marginBottom: '8px' }}>
-              Includes 3-day free trial. Then $3.99/week or $13.99/month.
+              Includes 7-day free trial. Then $6.99/month or $49.99/year.
             </div>
             <button className="btn btn-secondary btn-inline" onClick={() => navigate?.('tiltprofile-report')}>
               Open Report
